@@ -1,0 +1,1045 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import RegistrationSchema from "../zod-form-validators/registrationform";
+
+// Form section component
+const FormSection = ({ title, children }) => {
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+      <h2 className="text-xl font-semibold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+        {title}
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{children}</div>
+    </div>
+  );
+};
+
+// Form field component using React Hook Form
+const FormField = ({
+  label,
+  name,
+  type,
+  control,
+  options,
+  required,
+  placeholder,
+  errors,
+  disabled = false,
+}) => {
+  if (
+    type === "text" ||
+    type === "email" ||
+    type === "tel" ||
+    type === "date" ||
+    type === "number"
+  ) {
+    return (
+      <div className="col-span-1">
+        <label
+          htmlFor={name}
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        <Controller
+          name={name}
+          control={control}
+          render={({ field }) => (
+            <input
+              type={type}
+              id={name}
+              placeholder={placeholder}
+              disabled={disabled}
+              className={`w-full px-4 py-2 border ${
+                errors[name] ? "border-red-500" : "border-gray-300"
+              } rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                disabled ? "bg-gray-100" : ""
+              }`}
+              {...field}
+            />
+          )}
+        />
+        {errors[name] && (
+          <p className="mt-1 text-xs text-red-500">{errors[name].message}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (type === "select") {
+    return (
+      <div className="col-span-1">
+        <label
+          htmlFor={name}
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        <Controller
+          name={name}
+          control={control}
+          render={({ field }) => (
+            <select
+              id={name}
+              disabled={disabled}
+              className={`w-full px-4 py-2 border ${
+                errors[name] ? "border-red-500" : "border-gray-300"
+              } rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                disabled ? "bg-gray-100" : ""
+              }`}
+              {...field}
+            >
+              <option value="">Select an option</option>
+              {options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          )}
+        />
+        {errors[name] && (
+          <p className="mt-1 text-xs text-red-500">{errors[name].message}</p>
+        )}
+      </div>
+    );
+  }
+
+  if (type === "textarea") {
+    return (
+      <div className="col-span-2">
+        <label
+          htmlFor={name}
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          {label} {required && <span className="text-red-500">*</span>}
+        </label>
+        <Controller
+          name={name}
+          control={control}
+          render={({ field }) => (
+            <textarea
+              id={name}
+              rows={3}
+              disabled={disabled}
+              placeholder={placeholder}
+              className={`w-full px-4 py-2 border ${
+                errors[name] ? "border-red-500" : "border-gray-300"
+              } rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                disabled ? "bg-gray-100" : ""
+              }`}
+              {...field}
+            />
+          )}
+        />
+        {errors[name] && (
+          <p className="mt-1 text-xs text-red-500">{errors[name].message}</p>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+};
+
+// Step indicators
+const StepIndicator = ({ steps, currentStep }) => {
+  return (
+    <div className="w-full py-6 mb-8">
+      <div className="flex items-center justify-evenly">
+        {steps.map((step, index) => (
+          <div key={index} className="relative flex flex-col items-center">
+            <div
+              className={`w-10 h-10 flex items-center justify-center rounded-full text-lg font-bold ${
+                index < currentStep
+                  ? "bg-green-500 text-white"
+                  : index === currentStep
+                  ? "bg-blue-500 text-white"
+                  : "bg-gray-200 text-gray-600"
+              }`}
+            >
+              {index < currentStep ? "✓" : index + 1}
+            </div>
+            <div className="text-xs mt-2 font-medium text-center">{step}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// OTP Input component
+const OtpInput = ({ onVerify, email }) => {
+  const [otp, setOtp] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
+  useEffect(() => {
+    let timer;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
+  const handleSendOtp = () => {
+    if (!email) {
+      toast.error("Please enter a valid email first");
+      return;
+    }
+
+    setIsLoading(true);
+
+    // Simulate API call to send OTP
+    setTimeout(() => {
+      // This would be an actual API call in production
+      console.log("OTP sent to your email", email);
+      alert("OTP sent to your email", email);
+      setOtpSent(true);
+      setIsLoading(false);
+      setCountdown(60); // 60 seconds countdown
+      toast.success("OTP sent to your email");
+    }, 1500);
+  };
+
+  const handleVerifyOtp = () => {
+    if (otp.length < 4) {
+      toast.error("Please enter a valid OTP");
+      return;
+    }
+
+    setIsLoading(true);
+
+    // Simulate API call to verify OTP
+    setTimeout(() => {
+      // In a real app, this would validate against the backend
+      setIsLoading(false);
+
+      // For demo purposes, any 4-digit code is accepted
+      if (otp.length === 4) {
+        onVerify(true);
+        toast.success("Email verified successfully");
+      } else {
+        toast.error("Invalid OTP, please try again");
+      }
+    }, 1500);
+  };
+
+  return (
+    <div className="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200">
+      <div className="mb-3">
+        <p className="text-sm text-gray-600 mb-2">
+          {otpSent
+            ? "Enter the OTP sent to your email"
+            : "Verify your email to continue"}
+        </p>
+
+        {otpSent ? (
+          <div className="flex space-x-2">
+            <input
+              type="text"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.slice(0, 4))}
+              placeholder="Enter 4-digit OTP"
+              className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              maxLength={4}
+            />
+            <button
+              onClick={handleVerifyOtp}
+              disabled={isLoading || otp.length < 4}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition disabled:opacity-50"
+            >
+              {isLoading ? "Verifying..." : "Verify"}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleSendOtp}
+            disabled={isLoading || countdown > 0}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
+          >
+            {isLoading
+              ? "Sending..."
+              : countdown > 0
+              ? `Resend in ${countdown}s`
+              : "Send OTP"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const Registration = () => {
+  const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [formHasLocalData, setFormHasLocalData] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState(null);
+
+  // Local storage key for this form
+  const STORAGE_KEY = "unma-registration-form-data";
+
+  // Set up React Hook Form with Zod resolver
+  const {
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    getValues,
+    trigger,
+    reset,
+    formState: { errors, isValid, isDirty },
+  } = useForm({
+    resolver: zodResolver(RegistrationSchema),
+    mode: "onChange", // Validate on change for better user experience
+    defaultValues: {
+      // Personal Data
+      firstName: "",
+      lastName: "",
+      nickName: "",
+      contactNumber: "",
+      email: "",
+      emailVerified: false,
+      whatsappNumber: "",
+      school: "",
+      yearOfPassing: "",
+      country: "",
+      district: "",
+
+      // Professional Data
+      highestQualification: "",
+      jobTitle: "",
+      decisionMaker: "No",
+      areaOfExpertise: "",
+
+      // Transportation
+      travellingFrom: "",
+      travelDate: "",
+      modeOfTravel: "",
+      transportMode: "",
+
+      // Accommodation
+      location: "",
+      accommodationStatus: "",
+
+      // Finance
+      sponsorHelp: "No",
+      contributionAmount: "",
+      canSpendTime: "No",
+
+      // Skills
+      keySkills: "",
+    },
+  });
+
+  // Watch fields for conditional logic
+  const sponsorHelp = watch("sponsorHelp");
+  const email = watch("email");
+
+  // Load saved form data from local storage on initial mount
+  useEffect(() => {
+    const savedFormData = localStorage.getItem(STORAGE_KEY);
+    const savedStep = localStorage.getItem(`${STORAGE_KEY}-step`);
+    const savedEmailVerified = localStorage.getItem(
+      `${STORAGE_KEY}-email-verified`
+    );
+
+    if (savedFormData) {
+      try {
+        const parsedData = JSON.parse(savedFormData);
+        reset(parsedData);
+        setFormHasLocalData(true);
+
+        if (savedEmailVerified === "true") {
+          setEmailVerified(true);
+          setValue("emailVerified", true);
+        }
+
+        if (savedStep) {
+          setCurrentStep(parseInt(savedStep, 10));
+        }
+
+        toast.info("Your previous form data has been restored");
+      } catch (error) {
+        console.error("Error parsing saved form data:", error);
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+  }, [reset, setValue]);
+
+  // Save form data to local storage whenever form values change
+  const saveFormToLocalStorage = () => {
+    const formData = getValues();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
+    localStorage.setItem(`${STORAGE_KEY}-step`, currentStep.toString());
+    localStorage.setItem(
+      `${STORAGE_KEY}-email-verified`,
+      emailVerified.toString()
+    );
+  };
+
+  // Auto-save form data whenever any field changes or step changes
+  useEffect(() => {
+    if (isDirty) {
+      saveFormToLocalStorage();
+    }
+  }, [watch(), currentStep, emailVerified, isDirty]);
+
+  // Update form value when email is verified
+  useEffect(() => {
+    setValue("emailVerified", emailVerified);
+  }, [emailVerified, setValue]);
+
+  // Initialize Razorpay
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  // Handle payment
+  const handlePayment = async (amount) => {
+    try {
+      // Create order on your backend
+      const response = await fetch("/api/create-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: amount * 100, // Convert to paise
+        }),
+      });
+
+      const order = await response.json();
+
+      const options = {
+        key: process.env.REACT_APP_RAZORPAY_KEY_ID,
+        amount: amount * 100,
+        currency: "INR",
+        name: "UNMA 2025",
+        description: "Event Registration Contribution",
+        order_id: order.id,
+        handler: function (response) {
+          setPaymentStatus("success");
+          toast.success("Payment successful!");
+          // Verify payment on backend
+          verifyPayment(response);
+        },
+        prefill: {
+          name: getValues("firstName") + " " + getValues("lastName"),
+          email: getValues("email"),
+          contact: getValues("contactNumber"),
+        },
+        theme: {
+          color: "#2563EB",
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast.error("Payment initialization failed. Please try again.");
+    }
+  };
+
+  // Verify payment
+  const verifyPayment = async (paymentResponse) => {
+    try {
+      const response = await fetch("/api/verify-payment", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(paymentResponse),
+      });
+
+      const data = await response.json();
+      if (data.verified) {
+        setValue("paymentVerified", true);
+      } else {
+        toast.error("Payment verification failed. Please contact support.");
+      }
+    } catch (error) {
+      console.error("Verification error:", error);
+      toast.error("Payment verification failed. Please contact support.");
+    }
+  };
+
+  // All steps in the form
+  const steps = [
+    "Personal Info",
+    "Professional",
+    "Skills",
+    "Travel",
+    "Accommodation",
+    "Finance",
+  ];
+
+  // Handle email verification
+  const handleEmailVerified = (status) => {
+    setEmailVerified(status);
+    setValue("emailVerified", status);
+    saveFormToLocalStorage();
+  };
+
+  // Validate only the fields in the current step
+  const validateCurrentStep = async () => {
+    let fieldsToValidate = [];
+
+    // Determine which fields to validate based on current step
+    if (currentStep === 0) {
+      fieldsToValidate = [
+        "firstName",
+        "lastName",
+        "contactNumber",
+        "email",
+        "emailVerified",
+        "school",
+        "yearOfPassing",
+        "country",
+        "district",
+      ];
+
+      // Email verification is required
+      if (!emailVerified) {
+        toast.error("Please verify your email to continue");
+        return false;
+      }
+    } else if (currentStep === 1) {
+      fieldsToValidate = ["decisionMaker"];
+    } else if (currentStep === 2) {
+      fieldsToValidate = [
+        "travellingFrom",
+        "travelDate",
+        "modeOfTravel",
+        "transportMode",
+      ];
+    } else if (currentStep === 3) {
+      fieldsToValidate = ["accommodationStatus"];
+    } else if (currentStep === 4) {
+      fieldsToValidate = ["sponsorHelp", "canSpendTime"];
+      if (sponsorHelp === "Yes") {
+        fieldsToValidate.push("contributionAmount");
+      }
+    }
+
+    // Trigger validation only for the fields in the current step
+    const result = await trigger(fieldsToValidate);
+    return result;
+  };
+
+  // Handle next button click
+  const handleNextStep = async () => {
+    const isStepValid = await validateCurrentStep();
+
+    if (isStepValid) {
+      setCurrentStep((prevStep) => prevStep + 1);
+      window.scrollTo(0, 0);
+      saveFormToLocalStorage();
+    }
+  };
+
+  // Clear saved form data
+  const clearSavedFormData = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(`${STORAGE_KEY}-step`);
+    localStorage.removeItem(`${STORAGE_KEY}-email-verified`);
+    setFormHasLocalData(false);
+    toast.success("Saved form data has been cleared");
+  };
+
+  // Handle step validation and navigation
+  const onStepSubmit = async (data) => {
+    setIsSubmitting(true);
+    try {
+      // If this is the final step, submit the form
+      if (currentStep === steps.length - 1) {
+        console.log("Final form data:", data);
+
+        // Success! Clear local storage as form is successfully submitted
+        clearSavedFormData();
+
+        toast.success("Registration submitted successfully!");
+        navigate("/confirmation");
+      } else {
+        // Otherwise, go to the next step
+        console.log("Current step:", currentStep, data);
+        setCurrentStep(currentStep + 1);
+        window.scrollTo(0, 0);
+        saveFormToLocalStorage();
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("There was an error processing your form.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="bg-gray-50 py-12 px-4 min-h-screen">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-8 my-12">
+          <h1 className="text-3xl font-extrabold text-gray-900">
+            UNMA 2025 Event Registration
+          </h1>
+          <p className="mt-2 text-lg text-gray-600">
+            Please complete all sections to register for the event
+          </p>
+
+          {formHasLocalData && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-blue-800">
+                We've restored your previously saved data.
+              </p>
+              <button
+                onClick={clearSavedFormData}
+                className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+              >
+                Clear saved data and start over
+              </button>
+            </div>
+          )}
+        </div>
+
+        <StepIndicator steps={steps} currentStep={currentStep} />
+
+        <form onSubmit={handleSubmit(onStepSubmit)}>
+          {/* Step 1: Personal Data */}
+          {currentStep === 0 && (
+            <FormSection title="Personal Information">
+              <FormField
+                label="First Name"
+                name="firstName"
+                type="text"
+                control={control}
+                errors={errors}
+                required={true}
+              />
+
+              <FormField
+                label="Last Name"
+                name="lastName"
+                type="text"
+                control={control}
+                errors={errors}
+                required={true}
+              />
+
+              <FormField
+                label="Nick Name"
+                name="nickName"
+                type="text"
+                control={control}
+                errors={errors}
+              />
+
+              <FormField
+                label="Contact Number"
+                name="contactNumber"
+                type="tel"
+                control={control}
+                errors={errors}
+                required={true}
+              />
+
+              <FormField
+                label="Email Address"
+                name="email"
+                type="email"
+                control={control}
+                errors={errors}
+                required={true}
+                disabled={emailVerified}
+              />
+
+              {email && email.includes("@") && (
+                <div className="col-span-2">
+                  <OtpInput onVerify={handleEmailVerified} email={email} />
+                </div>
+              )}
+
+              <FormField
+                label="WhatsApp Number"
+                name="whatsappNumber"
+                type="tel"
+                control={control}
+                errors={errors}
+              />
+
+              <FormField
+                label="School"
+                name="school"
+                type="select"
+                control={control}
+                errors={errors}
+                options={[
+                  { value: "JNV Kannur", label: "JNV Kannur" },
+                  { value: "JNV Kasaragod", label: "JNV Kasaragod" },
+                  { value: "JNV Kozhikode", label: "JNV Kozhikode" },
+                  { value: "JNV Wayanad", label: "JNV Wayanad" },
+                  { value: "JNV Ernakulam", label: "JNV Ernakulam" },
+                  { value: "JNV Idukki", label: "JNV Idukki" },
+                  {
+                    value: "JNV Thiruvananthapuram",
+                    label: "JNV Thiruvananthapuram",
+                  },
+                  { value: "JNV Kollam", label: "JNV Kollam" },
+                  { value: "JNV Pathanamthitta", label: "JNV Pathanamthitta" },
+                  { value: "JNV Kottayam", label: "JNV Kottayam" },
+                  { value: "JNV Palakkad", label: "JNV Palakkad" },
+                  { value: "Others", label: "Others" },
+                ]}
+                required={true}
+              />
+
+              <FormField
+                label="Year of Passing 12th"
+                name="yearOfPassing"
+                type="select"
+                control={control}
+                errors={errors}
+                options={Array.from({ length: 40 }, (_, i) => ({
+                  value: String(1986 + i),
+                  label: String(1986 + i),
+                }))}
+                required={true}
+              />
+
+              <FormField
+                label="Country"
+                name="country"
+                type="select"
+                control={control}
+                errors={errors}
+                options={[
+                  { value: "India", label: "India" },
+                  { value: "UAE", label: "UAE" },
+                  { value: "USA", label: "USA" },
+                  { value: "UK", label: "UK" },
+                  { value: "Canada", label: "Canada" },
+                  { value: "Australia", label: "Australia" },
+                  { value: "Other", label: "Other" },
+                ]}
+                required={true}
+              />
+
+              <FormField
+                label="District"
+                name="district"
+                type="select"
+                control={control}
+                errors={errors}
+                options={[
+                  { value: "Kasaragod", label: "Kasaragod" },
+                  { value: "Kannur", label: "Kannur" },
+                  { value: "Kozhikode", label: "Kozhikode" },
+                  { value: "Wayanad", label: "Wayanad" },
+                  { value: "Malappuram", label: "Malappuram" },
+                  { value: "Palakkad", label: "Palakkad" },
+                  { value: "Thrissur", label: "Thrissur" },
+                  { value: "Ernakulam", label: "Ernakulam" },
+                  { value: "Idukki", label: "Idukki" },
+                  { value: "Kottayam", label: "Kottayam" },
+                  { value: "Alappuzha", label: "Alappuzha" },
+                  { value: "Pathanamthitta", label: "Pathanamthitta" },
+                  { value: "Kollam", label: "Kollam" },
+                  { value: "Thiruvananthapuram", label: "Thiruvananthapuram" },
+                ]}
+                required={true}
+              />
+            </FormSection>
+          )}
+
+          {/* Step 2: Professional Data */}
+          {currentStep === 1 && (
+            <FormSection title="Professional Information">
+              <FormField
+                label="Highest Qualification"
+                name="highestQualification"
+                type="text"
+                control={control}
+                errors={errors}
+              />
+
+              <FormField
+                label="Job Title"
+                name="jobTitle"
+                type="text"
+                control={control}
+                errors={errors}
+              />
+
+              <FormField
+                label="Decision Maker in Job"
+                name="decisionMaker"
+                type="select"
+                control={control}
+                errors={errors}
+                options={[
+                  { value: "Yes", label: "Yes" },
+                  { value: "No", label: "No" },
+                ]}
+                required={true}
+              />
+
+              <FormField
+                label="Area of Expertise"
+                name="areaOfExpertise"
+                type="text"
+                control={control}
+                errors={errors}
+              />
+            </FormSection>
+          )}
+
+          {/* Step 3: Skills */}
+          {currentStep === 2 && (
+            <FormSection title="Skills & Strengths">
+              <FormField
+                label="Key Skills"
+                name="keySkills"
+                type="textarea"
+                control={control}
+                errors={errors}
+                placeholder="e.g., Coordination, Friends, Technology, Creativity, etc."
+              />
+            </FormSection>
+          )}
+
+          {/* Step 4: Transportation */}
+          {currentStep === 3 && (
+            <FormSection title="Transportation Details">
+              <FormField
+                label="Travelling From"
+                name="travellingFrom"
+                type="text"
+                control={control}
+                errors={errors}
+                required={true}
+              />
+
+              <FormField
+                label="Travel Date/Time"
+                name="travelDate"
+                type="date"
+                control={control}
+                errors={errors}
+                required={true}
+              />
+
+              <FormField
+                label="Mode of Travel"
+                name="modeOfTravel"
+                type="select"
+                control={control}
+                errors={errors}
+                options={[
+                  { value: "Car", label: "Car" },
+                  { value: "Train", label: "Train" },
+                  { value: "Flight", label: "Flight" },
+                  { value: "Other", label: "Other" },
+                ]}
+                required={true}
+              />
+
+              <FormField
+                label="Do you need transport?"
+                name="needTransport"
+                type="select"
+                control={control}
+                errors={errors}
+                options={[
+                  { value: "No", label: "No, I have my own transport" },
+                  { value: "Yes", label: "Yes, I need transport" },
+                  {
+                    value: "CoShare",
+                    label: "Yes, willing to co-share transport",
+                  },
+                ]}
+                required={true}
+              />
+
+              {watch("needTransport") === "CoShare" && (
+                <FormField
+                  label="Number of seats you can share"
+                  name="coShareSeats"
+                  type="number"
+                  control={control}
+                  errors={errors}
+                  placeholder="How many people can you accommodate?"
+                />
+              )}
+            </FormSection>
+          )}
+
+          {/* Step 5: Accommodation */}
+          {currentStep === 4 && (
+            <FormSection title="Accommodation Details">
+              <FormField
+                label="Accommodation Requirement"
+                name="accommodationStatus"
+                type="select"
+                control={control}
+                errors={errors}
+                options={[
+                  { value: "need", label: "I need accommodation" },
+                  { value: "provide", label: "I can provide accommodation" },
+                  { value: "none", label: "I don't need accommodation" },
+                ]}
+                required={true}
+              />
+
+              {watch("accommodationStatus") === "provide" && (
+                <FormField
+                  label="Number of people you can accommodate"
+                  name="accommodationCapacity"
+                  type="number"
+                  control={control}
+                  errors={errors}
+                  placeholder="How many people can you accommodate?"
+                />
+              )}
+
+              <FormField
+                label="Location"
+                name="location"
+                type="text"
+                control={control}
+                errors={errors}
+                placeholder="Your location or preferred accommodation area"
+              />
+            </FormSection>
+          )}
+
+          {/* Step 6: Finance */}
+          {currentStep === 5 && (
+            <FormSection title="Financial Contribution">
+              <FormField
+                label="Would you like to contribute financially?"
+                name="sponsorHelp"
+                type="select"
+                control={control}
+                errors={errors}
+                options={[
+                  { value: "Yes", label: "Yes" },
+                  { value: "No", label: "No" },
+                ]}
+                required={true}
+              />
+
+              {watch("sponsorHelp") === "Yes" && (
+                <>
+                  <FormField
+                    label="Contribution Amount (₹)"
+                    name="contributionAmount"
+                    type="number"
+                    control={control}
+                    errors={errors}
+                    placeholder="Enter amount in INR"
+                  />
+
+                  {watch("contributionAmount") && (
+                    <div className="col-span-2 mt-4">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handlePayment(watch("contributionAmount"))
+                        }
+                        className="w-full px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 transition"
+                      >
+                        Proceed to Payment
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              <FormField
+                label="Can you volunteer time for the event?"
+                name="canSpendTime"
+                type="select"
+                control={control}
+                errors={errors}
+                options={[
+                  { value: "Yes", label: "Yes" },
+                  { value: "No", label: "No" },
+                ]}
+                required={true}
+              />
+            </FormSection>
+          )}
+
+          {/* Progress Indicator for mobile */}
+          <div className="md:hidden mt-6">
+            <p className="text-sm text-gray-600 text-center">
+              Step {currentStep + 1} of {steps.length} (
+              {Math.round(((currentStep + 1) / steps.length) * 100)}%)
+            </p>
+            <div className="w-full bg-gray-200 rounded-full h-2.5 my-2">
+              <div
+                className="bg-blue-600 h-2.5 rounded-full"
+                style={{
+                  width: `${((currentStep + 1) / steps.length) * 100}%`,
+                }}
+              ></div>
+            </div>
+          </div>
+
+          {/* Navigation Buttons */}
+          <div className="mt-10 flex justify-between">
+            {currentStep > 0 && (
+              <button
+                type="button"
+                className="px-6 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition"
+                onClick={() => setCurrentStep(currentStep - 1)}
+              >
+                Back
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={
+                currentStep === steps.length - 1
+                  ? handleSubmit(onStepSubmit)
+                  : handleNextStep
+              }
+              className={`px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition ${
+                currentStep === 0 ? "ml-auto" : ""
+              }`}
+              disabled={isSubmitting}
+            >
+              {isSubmitting
+                ? "Processing..."
+                : currentStep === steps.length - 1
+                ? "Submit Registration"
+                : "Continue"}
+            </button>
+          </div>
+
+          {/* Save status indicator */}
+          <div className="mt-6 text-center">
+            <p className="text-xs text-gray-500">
+              Form data is automatically saved in your browser
+            </p>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default Registration;
