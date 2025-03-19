@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import ReCAPTCHA from "react-google-recaptcha";
+import VerificationQuiz from "../components/VerificationQuiz";
 import RegistrationSchema from "../zod-form-validators/registrationform";
 
 // Form section component
@@ -281,6 +283,8 @@ const Registration = () => {
   const [emailVerified, setEmailVerified] = useState(false);
   const [formHasLocalData, setFormHasLocalData] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState(null);
+  const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [quizCompleted, setQuizCompleted] = useState(false);
 
   // Local storage key for this form
   const STORAGE_KEY = "unma-registration-form-data";
@@ -424,7 +428,7 @@ const Registration = () => {
       const order = await response.json();
 
       const options = {
-        key: process.env.REACT_APP_RAZORPAY_KEY_ID,
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: amount * 100,
         currency: "INR",
         name: "UNMA 2025",
@@ -477,9 +481,23 @@ const Registration = () => {
     }
   };
 
+  // Handle reCAPTCHA verification
+  const handleCaptchaVerify = (value) => {
+    if (value) {
+      setCaptchaVerified(true);
+      toast.success("CAPTCHA verified successfully!");
+    }
+  };
+
+  // Handle quiz completion
+  const handleQuizComplete = (passed) => {
+    setQuizCompleted(passed);
+  };
+
   // All steps in the form
   const steps = [
     "Personal Info",
+    "Verification",
     "Professional",
     "Skills",
     "Travel",
@@ -498,7 +516,6 @@ const Registration = () => {
   const validateCurrentStep = async () => {
     let fieldsToValidate = [];
 
-    // Determine which fields to validate based on current step
     if (currentStep === 0) {
       fieldsToValidate = [
         "firstName",
@@ -512,23 +529,32 @@ const Registration = () => {
         "district",
       ];
 
-      // Email verification is required
       if (!emailVerified) {
         toast.error("Please verify your email to continue");
         return false;
       }
+
+      if (!captchaVerified) {
+        toast.error("Please complete the CAPTCHA verification");
+        return false;
+      }
     } else if (currentStep === 1) {
-      fieldsToValidate = ["decisionMaker"];
+      if (!quizCompleted) {
+        toast.error("Please complete the verification quiz");
+        return false;
+      }
     } else if (currentStep === 2) {
+      fieldsToValidate = ["decisionMaker"];
+    } else if (currentStep === 3) {
       fieldsToValidate = [
         "travellingFrom",
         "travelDate",
         "modeOfTravel",
         "transportMode",
       ];
-    } else if (currentStep === 3) {
-      fieldsToValidate = ["accommodationStatus"];
     } else if (currentStep === 4) {
+      fieldsToValidate = ["accommodationStatus"];
+    } else if (currentStep === 5) {
       fieldsToValidate = ["sponsorHelp", "canSpendTime"];
       if (sponsorHelp === "Yes") {
         fieldsToValidate.push("contributionAmount");
@@ -619,152 +645,181 @@ const Registration = () => {
         <form onSubmit={handleSubmit(onStepSubmit)}>
           {/* Step 1: Personal Data */}
           {currentStep === 0 && (
-            <FormSection title="Personal Information">
-              <FormField
-                label="First Name"
-                name="firstName"
-                type="text"
-                control={control}
-                errors={errors}
-                required={true}
-              />
+            <>
+              <FormSection title="Personal Information">
+                <FormField
+                  label="First Name"
+                  name="firstName"
+                  type="text"
+                  control={control}
+                  errors={errors}
+                  required={true}
+                />
 
-              <FormField
-                label="Last Name"
-                name="lastName"
-                type="text"
-                control={control}
-                errors={errors}
-                required={true}
-              />
+                <FormField
+                  label="Last Name"
+                  name="lastName"
+                  type="text"
+                  control={control}
+                  errors={errors}
+                  required={true}
+                />
 
-              <FormField
-                label="Nick Name"
-                name="nickName"
-                type="text"
-                control={control}
-                errors={errors}
-              />
+                <FormField
+                  label="Nick Name"
+                  name="nickName"
+                  type="text"
+                  control={control}
+                  errors={errors}
+                />
 
-              <FormField
-                label="Contact Number"
-                name="contactNumber"
-                type="tel"
-                control={control}
-                errors={errors}
-                required={true}
-              />
+                <FormField
+                  label="Contact Number"
+                  name="contactNumber"
+                  type="tel"
+                  control={control}
+                  errors={errors}
+                  required={true}
+                />
 
-              <FormField
-                label="Email Address"
-                name="email"
-                type="email"
-                control={control}
-                errors={errors}
-                required={true}
-                disabled={emailVerified}
-              />
+                <FormField
+                  label="Email Address"
+                  name="email"
+                  type="email"
+                  control={control}
+                  errors={errors}
+                  required={true}
+                  disabled={emailVerified}
+                />
 
-              {email && email.includes("@") && (
-                <div className="col-span-2">
-                  <OtpInput onVerify={handleEmailVerified} email={email} />
+                {email && email.includes("@") && (
+                  <div className="col-span-2">
+                    <OtpInput onVerify={handleEmailVerified} email={email} />
+                  </div>
+                )}
+
+                <FormField
+                  label="WhatsApp Number"
+                  name="whatsappNumber"
+                  type="tel"
+                  control={control}
+                  errors={errors}
+                />
+
+                <FormField
+                  label="School"
+                  name="school"
+                  type="select"
+                  control={control}
+                  errors={errors}
+                  options={[
+                    { value: "JNV Kannur", label: "JNV Kannur" },
+                    { value: "JNV Kasaragod", label: "JNV Kasaragod" },
+                    { value: "JNV Kozhikode", label: "JNV Kozhikode" },
+                    { value: "JNV Wayanad", label: "JNV Wayanad" },
+                    { value: "JNV Ernakulam", label: "JNV Ernakulam" },
+                    { value: "JNV Idukki", label: "JNV Idukki" },
+                    {
+                      value: "JNV Thiruvananthapuram",
+                      label: "JNV Thiruvananthapuram",
+                    },
+                    { value: "JNV Kollam", label: "JNV Kollam" },
+                    {
+                      value: "JNV Pathanamthitta",
+                      label: "JNV Pathanamthitta",
+                    },
+                    { value: "JNV Kottayam", label: "JNV Kottayam" },
+                    { value: "JNV Palakkad", label: "JNV Palakkad" },
+                    { value: "Others", label: "Others" },
+                  ]}
+                  required={true}
+                />
+
+                <FormField
+                  label="Year of Passing 12th"
+                  name="yearOfPassing"
+                  type="select"
+                  control={control}
+                  errors={errors}
+                  options={Array.from({ length: 40 }, (_, i) => ({
+                    value: String(1986 + i),
+                    label: String(1986 + i),
+                  }))}
+                  required={true}
+                />
+
+                <FormField
+                  label="Country"
+                  name="country"
+                  type="select"
+                  control={control}
+                  errors={errors}
+                  options={[
+                    { value: "India", label: "India" },
+                    { value: "UAE", label: "UAE" },
+                    { value: "USA", label: "USA" },
+                    { value: "UK", label: "UK" },
+                    { value: "Canada", label: "Canada" },
+                    { value: "Australia", label: "Australia" },
+                    { value: "Other", label: "Other" },
+                  ]}
+                  required={true}
+                />
+
+                <FormField
+                  label="District"
+                  name="district"
+                  type="select"
+                  control={control}
+                  errors={errors}
+                  options={[
+                    { value: "Kasaragod", label: "Kasaragod" },
+                    { value: "Kannur", label: "Kannur" },
+                    { value: "Kozhikode", label: "Kozhikode" },
+                    { value: "Wayanad", label: "Wayanad" },
+                    { value: "Malappuram", label: "Malappuram" },
+                    { value: "Palakkad", label: "Palakkad" },
+                    { value: "Thrissur", label: "Thrissur" },
+                    { value: "Ernakulam", label: "Ernakulam" },
+                    { value: "Idukki", label: "Idukki" },
+                    { value: "Kottayam", label: "Kottayam" },
+                    { value: "Alappuzha", label: "Alappuzha" },
+                    { value: "Pathanamthitta", label: "Pathanamthitta" },
+                    { value: "Kollam", label: "Kollam" },
+                    {
+                      value: "Thiruvananthapuram",
+                      label: "Thiruvananthapuram",
+                    },
+                  ]}
+                  required={true}
+                />
+              </FormSection>
+
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                  Verification
+                </h3>
+                <div className="flex justify-center mb-6">
+                  <ReCAPTCHA
+                    sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                    onChange={handleCaptchaVerify}
+                  />
                 </div>
-              )}
+              </div>
+            </>
+          )}
 
-              <FormField
-                label="WhatsApp Number"
-                name="whatsappNumber"
-                type="tel"
-                control={control}
-                errors={errors}
-              />
-
-              <FormField
-                label="School"
-                name="school"
-                type="select"
-                control={control}
-                errors={errors}
-                options={[
-                  { value: "JNV Kannur", label: "JNV Kannur" },
-                  { value: "JNV Kasaragod", label: "JNV Kasaragod" },
-                  { value: "JNV Kozhikode", label: "JNV Kozhikode" },
-                  { value: "JNV Wayanad", label: "JNV Wayanad" },
-                  { value: "JNV Ernakulam", label: "JNV Ernakulam" },
-                  { value: "JNV Idukki", label: "JNV Idukki" },
-                  {
-                    value: "JNV Thiruvananthapuram",
-                    label: "JNV Thiruvananthapuram",
-                  },
-                  { value: "JNV Kollam", label: "JNV Kollam" },
-                  { value: "JNV Pathanamthitta", label: "JNV Pathanamthitta" },
-                  { value: "JNV Kottayam", label: "JNV Kottayam" },
-                  { value: "JNV Palakkad", label: "JNV Palakkad" },
-                  { value: "Others", label: "Others" },
-                ]}
-                required={true}
-              />
-
-              <FormField
-                label="Year of Passing 12th"
-                name="yearOfPassing"
-                type="select"
-                control={control}
-                errors={errors}
-                options={Array.from({ length: 40 }, (_, i) => ({
-                  value: String(1986 + i),
-                  label: String(1986 + i),
-                }))}
-                required={true}
-              />
-
-              <FormField
-                label="Country"
-                name="country"
-                type="select"
-                control={control}
-                errors={errors}
-                options={[
-                  { value: "India", label: "India" },
-                  { value: "UAE", label: "UAE" },
-                  { value: "USA", label: "USA" },
-                  { value: "UK", label: "UK" },
-                  { value: "Canada", label: "Canada" },
-                  { value: "Australia", label: "Australia" },
-                  { value: "Other", label: "Other" },
-                ]}
-                required={true}
-              />
-
-              <FormField
-                label="District"
-                name="district"
-                type="select"
-                control={control}
-                errors={errors}
-                options={[
-                  { value: "Kasaragod", label: "Kasaragod" },
-                  { value: "Kannur", label: "Kannur" },
-                  { value: "Kozhikode", label: "Kozhikode" },
-                  { value: "Wayanad", label: "Wayanad" },
-                  { value: "Malappuram", label: "Malappuram" },
-                  { value: "Palakkad", label: "Palakkad" },
-                  { value: "Thrissur", label: "Thrissur" },
-                  { value: "Ernakulam", label: "Ernakulam" },
-                  { value: "Idukki", label: "Idukki" },
-                  { value: "Kottayam", label: "Kottayam" },
-                  { value: "Alappuzha", label: "Alappuzha" },
-                  { value: "Pathanamthitta", label: "Pathanamthitta" },
-                  { value: "Kollam", label: "Kollam" },
-                  { value: "Thiruvananthapuram", label: "Thiruvananthapuram" },
-                ]}
-                required={true}
-              />
+          {/* Step 2: Verification Quiz */}
+          {currentStep === 1 && (
+            <FormSection title="JNV Background Verification">
+              <div className="col-span-2">
+                <VerificationQuiz onQuizComplete={handleQuizComplete} />
+              </div>
             </FormSection>
           )}
 
-          {/* Step 2: Professional Data */}
-          {currentStep === 1 && (
+          {/* Step 3: Professional Data */}
+          {currentStep === 2 && (
             <FormSection title="Professional Information">
               <FormField
                 label="Highest Qualification"
@@ -805,8 +860,8 @@ const Registration = () => {
             </FormSection>
           )}
 
-          {/* Step 3: Skills */}
-          {currentStep === 2 && (
+          {/* Step 4: Skills */}
+          {currentStep === 3 && (
             <FormSection title="Skills & Strengths">
               <FormField
                 label="Key Skills"
@@ -819,8 +874,8 @@ const Registration = () => {
             </FormSection>
           )}
 
-          {/* Step 4: Transportation */}
-          {currentStep === 3 && (
+          {/* Step 5: Transportation */}
+          {currentStep === 4 && (
             <FormSection title="Transportation Details">
               <FormField
                 label="Travelling From"
@@ -885,8 +940,8 @@ const Registration = () => {
             </FormSection>
           )}
 
-          {/* Step 5: Accommodation */}
-          {currentStep === 4 && (
+          {/* Step 6: Accommodation */}
+          {currentStep === 5 && (
             <FormSection title="Accommodation Details">
               <FormField
                 label="Accommodation Requirement"
@@ -924,8 +979,8 @@ const Registration = () => {
             </FormSection>
           )}
 
-          {/* Step 6: Finance */}
-          {currentStep === 5 && (
+          {/* Step 7: Finance */}
+          {currentStep === 6 && (
             <FormSection title="Financial Contribution">
               <FormField
                 label="Would you like to contribute financially?"
@@ -1020,7 +1075,11 @@ const Registration = () => {
               className={`px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition ${
                 currentStep === 0 ? "ml-auto" : ""
               }`}
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting ||
+                (currentStep === 0 && !captchaVerified) ||
+                (currentStep === 1 && !quizCompleted)
+              }
             >
               {isSubmitting
                 ? "Processing..."

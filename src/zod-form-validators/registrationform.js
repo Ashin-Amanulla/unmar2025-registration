@@ -9,6 +9,8 @@ const RegistrationSchema = z.object({
     contactNumber: z.string().min(10, "Valid contact number is required"),
     email: z.string().email("Valid email is required"),
     emailVerified: z.boolean(),
+    captchaVerified: z.boolean().optional(),
+    quizCompleted: z.boolean().optional(),
     whatsappNumber: z.string().optional(),
     school: z.string().min(2, "School selection is required"),
     yearOfPassing: z.string().min(4, "Year of passing is required"),
