@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { LockClosedIcon } from "@heroicons/react/24/outline";
-import toast from "react-hot-toast";
+import { toast } from "react-toastify";
+import { useAuth } from "../hooks/useAuth"; // Assuming you have this hook
 
 const AdminLogin = () => {
   const [credentials, setCredentials] = useState({
@@ -10,6 +11,14 @@ const AdminLogin = () => {
   });
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    // Redirect if already authenticated
+    if (isAuthenticated) {
+      navigate("/admin/dashboard");
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -24,20 +33,11 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      // In a real app, this would call an API endpoint
-      // Simulating API call with timeout
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // For demo purposes, allowing any login with valid format
-      if (credentials.email.includes("@") && credentials.password.length >= 6) {
-        localStorage.setItem("adminToken", "demo-token-12345");
-        toast.success("Login successful!");
-        navigate("/admin/dashboard");
-      } else {
-        toast.error("Invalid credentials. Please try again.");
-      }
+      await login(credentials);
+      toast.success("Login successful!");
+      navigate("/admin/dashboard");
     } catch (error) {
-      toast.error("Login failed. Please try again.");
+      toast.error(error.message || "Login failed. Please try again.");
       console.error("Login error:", error);
     } finally {
       setLoading(false);
@@ -48,7 +48,7 @@ const AdminLogin = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
-          <div className="h-16 w-16 bg-primary rounded-full flex items-center justify-center">
+          <div className="h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center">
             <LockClosedIcon className="h-8 w-8 text-white" />
           </div>
         </div>
@@ -77,7 +77,7 @@ const AdminLogin = () => {
                   type="email"
                   autoComplete="email"
                   required
-                  className="input"
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   value={credentials.email}
                   onChange={handleChange}
                 />
@@ -98,7 +98,7 @@ const AdminLogin = () => {
                   type="password"
                   autoComplete="current-password"
                   required
-                  className="input"
+                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   value={credentials.password}
                   onChange={handleChange}
                 />
@@ -111,7 +111,7 @@ const AdminLogin = () => {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
                 <label
                   htmlFor="remember-me"
@@ -124,7 +124,7 @@ const AdminLogin = () => {
               <div className="text-sm">
                 <a
                   href="#"
-                  className="font-medium text-primary hover:text-primary-dark"
+                  className="font-medium text-blue-600 hover:text-blue-500"
                 >
                   Forgot your password?
                 </a>
@@ -134,7 +134,7 @@ const AdminLogin = () => {
             <div>
               <button
                 type="submit"
-                className="w-full btn btn-primary py-2 px-4"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={loading}
               >
                 {loading ? (

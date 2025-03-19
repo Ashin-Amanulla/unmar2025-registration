@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 // Query keys for better organization
 const AUTH_KEYS = {
@@ -7,13 +9,127 @@ const AUTH_KEYS = {
     AUTH_STATUS: 'auth-status'
 };
 
+const useAuthStore = create(
+    persist(
+        (set) => ({
+            user: null,
+            token: null,
+            isAuthenticated: false,
+            login: async (credentials) => {
+                try {
+                    const response = await fetch("/api/admin/login", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify(credentials),
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.message || "Login failed");
+                    }
+
+                    const data = await response.json();
+                    set({
+                        user: data.user,
+                        token: data.token,
+                        isAuthenticated: true,
+                    });
+
+                    // Set token in localStorage for API calls
+                    localStorage.setItem("adminToken", data.token);
+                    return data;
+                } catch (error) {
+                    throw error;
+                }
+            },
+            logout: () => {
+                localStorage.removeItem("adminToken");
+                set({
+                    user: null,
+                    token: null,
+                    isAuthenticated: false,
+                });
+            },
+            updateUser: (userData) => {
+                set((state) => ({
+                    user: { ...state.user, ...userData },
+                }));
+            },
+        }),
+        {
+            name: "admin-auth",
+            getStorage: () => localStorage,
+        }
+    )
+);
+
+// Create an axios instance with auth headers
+export const createAuthenticatedApi = () => {
+    const token = localStorage.getItem("adminToken");
+
+    return {
+        get: async (url) => {
+            const response = await fetch(url, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            if (!response.ok) throw new Error("Request failed");
+            return response.json();
+        },
+        post: async (url, data) => {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) throw new Error("Request failed");
+            return response.json();
+        },
+        put: async (url, data) => {
+            const response = await fetch(url, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) throw new Error("Request failed");
+            return response.json();
+        },
+        delete: async (url) => {
+            const response = await fetch(url, {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            });
+            if (!response.ok) throw new Error("Request failed");
+            return response.json();
+        },
+    };
+};
+
 const useAuth = () => {
     const queryClient = useQueryClient();
+    const {
+        user,
+        token,
+        isAuthenticated,
+        login: storeLogin,
+        logout: storeLogout,
+        updateUser,
+    } = useAuthStore();
 
     // Get current user from localStorage on initial load
     const loadUserFromStorage = () => {
-        const token = localStorage.getItem('userToken');
-
+        const token = localStorage.getItem('adminToken');
         if (!token) return null;
 
         try {
@@ -26,74 +142,17 @@ const useAuth = () => {
     };
 
     // Query to check authentication status
-    const { data: user, isLoading: isAuthCheckLoading } = useQuery({
+    const { isLoading: isAuthCheckLoading } = useQuery({
         queryKey: [AUTH_KEYS.USER],
         queryFn: loadUserFromStorage,
-        staleTime: Infinity, // Auth state doesn't get stale until we explicitly invalidate it
+        staleTime: Infinity,
         initialData: loadUserFromStorage
-    });
-
-    // Register mutation
-    const registerMutation = useMutation({
-        mutationFn: async (userData) => {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // For demo purposes, just return a success response
-            return {
-                id: Math.floor(Math.random() * 1000),
-                name: userData.name,
-                email: userData.email,
-                token: 'mock-jwt-token'
-            };
-        },
-        onSuccess: (data) => {
-            // Store in local storage
-            localStorage.setItem('userToken', data.token);
-            localStorage.setItem('userData', JSON.stringify({
-                id: data.id,
-                name: data.name,
-                email: data.email
-            }));
-
-            // Update cache
-            queryClient.setQueryData([AUTH_KEYS.USER], data);
-            toast.success('Registration successful!');
-        },
-        onError: (error) => {
-            toast.error(error.message || 'Registration failed');
-        }
     });
 
     // Login mutation
     const loginMutation = useMutation({
-        mutationFn: async (credentials) => {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            // Mock validation
-            if (!credentials.email || !credentials.password) {
-                throw new Error('Email and password are required');
-            }
-
-            // For demo purposes, return mock user data
-            return {
-                id: Math.floor(Math.random() * 1000),
-                name: credentials.email.split('@')[0],
-                email: credentials.email,
-                token: 'mock-jwt-token'
-            };
-        },
+        mutationFn: storeLogin,
         onSuccess: (data) => {
-            // Store in local storage
-            localStorage.setItem('userToken', data.token);
-            localStorage.setItem('userData', JSON.stringify({
-                id: data.id,
-                name: data.name,
-                email: data.email
-            }));
-
-            // Update cache
             queryClient.setQueryData([AUTH_KEYS.USER], data);
             toast.success('Login successful!');
         },
@@ -105,16 +164,10 @@ const useAuth = () => {
     // Logout mutation
     const logoutMutation = useMutation({
         mutationFn: async () => {
-            // Simulate API call (in a real app, this might invalidate the token on the server)
-            await new Promise(resolve => setTimeout(resolve, 300));
+            storeLogout();
             return true;
         },
         onSuccess: () => {
-            // Clear local storage
-            localStorage.removeItem('userToken');
-            localStorage.removeItem('userData');
-
-            // Set user to null in cache
             queryClient.setQueryData([AUTH_KEYS.USER], null);
             toast.success('Logged out successfully');
         }
@@ -123,27 +176,25 @@ const useAuth = () => {
     return {
         // Auth state
         user,
-        isAuthenticated: !!user,
+        token,
+        isAuthenticated,
 
         // Loading states
         isAuthCheckLoading,
         isLoggingIn: loginMutation.isPending,
-        isRegistering: registerMutation.isPending,
         isLoggingOut: logoutMutation.isPending,
 
         // Error states
         loginError: loginMutation.error,
-        registerError: registerMutation.error,
 
         // Auth actions
         login: (credentials) => loginMutation.mutate(credentials),
-        register: (userData) => registerMutation.mutate(userData),
         logout: () => logoutMutation.mutate(),
+        updateUser,
 
         // Util functions
         clearErrors: () => {
             loginMutation.reset();
-            registerMutation.reset();
         }
     };
 };

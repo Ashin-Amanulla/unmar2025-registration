@@ -10,11 +10,11 @@ import RegistrationSchema from "../zod-form-validators/registrationform";
 // Form section component
 const FormSection = ({ title, children }) => {
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-      <h2 className="text-xl font-semibold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+    <div className="bg-white p-4 sm:p-6 rounded-lg shadow-md mb-4 sm:mb-6">
+      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4 sm:mb-6 pb-2 border-b border-gray-200">
         {title}
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{children}</div>
+      <div className="flex flex-col space-y-4">{children}</div>
     </div>
   );
 };
@@ -39,7 +39,7 @@ const FormField = ({
     type === "number"
   ) {
     return (
-      <div className="col-span-1">
+      <div className="w-full">
         <label
           htmlFor={name}
           className="block text-sm font-medium text-gray-700 mb-1"
@@ -73,7 +73,7 @@ const FormField = ({
 
   if (type === "select") {
     return (
-      <div className="col-span-1">
+      <div className="w-full">
         <label
           htmlFor={name}
           className="block text-sm font-medium text-gray-700 mb-1"
@@ -94,8 +94,8 @@ const FormField = ({
               }`}
               {...field}
             >
-              <option value="">Select an option</option>
-              {options.map((option) => (
+              <option value="">Select {label}</option>
+              {options?.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -112,7 +112,7 @@ const FormField = ({
 
   if (type === "textarea") {
     return (
-      <div className="col-span-2">
+      <div className="w-full">
         <label
           htmlFor={name}
           className="block text-sm font-medium text-gray-700 mb-1"
@@ -150,12 +150,15 @@ const FormField = ({
 // Step indicators
 const StepIndicator = ({ steps, currentStep }) => {
   return (
-    <div className="w-full py-6 mb-8">
-      <div className="flex items-center justify-evenly">
+    <div className="w-full py-4 sm:py-6 mb-4 sm:mb-8 overflow-x-auto">
+      <div className="flex items-center justify-start sm:justify-evenly min-w-max sm:min-w-0 px-4 sm:px-0">
         {steps.map((step, index) => (
-          <div key={index} className="relative flex flex-col items-center">
+          <div
+            key={index}
+            className="relative flex flex-col items-center mx-2 sm:mx-0"
+          >
             <div
-              className={`w-10 h-10 flex items-center justify-center rounded-full text-lg font-bold ${
+              className={`w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full text-sm sm:text-lg font-bold ${
                 index < currentStep
                   ? "bg-green-500 text-white"
                   : index === currentStep
@@ -165,7 +168,16 @@ const StepIndicator = ({ steps, currentStep }) => {
             >
               {index < currentStep ? "✓" : index + 1}
             </div>
-            <div className="text-xs mt-2 font-medium text-center">{step}</div>
+            <div className="text-[10px] sm:text-xs mt-1 sm:mt-2 font-medium text-center max-w-[80px] sm:max-w-none whitespace-nowrap">
+              {step}
+            </div>
+            {index < steps.length - 1 && (
+              <div
+                className={`hidden sm:block absolute h-[2px] w-full top-5 -right-1/2 transform translate-x-1/2 ${
+                  index < currentStep ? "bg-green-500" : "bg-gray-200"
+                }`}
+              />
+            )}
           </div>
         ))}
       </div>
@@ -304,9 +316,7 @@ const Registration = () => {
     mode: "onChange", // Validate on change for better user experience
     defaultValues: {
       // Personal Data
-      firstName: "",
-      lastName: "",
-      nickName: "",
+      name: "",
       contactNumber: "",
       email: "",
       emailVerified: false,
@@ -615,24 +625,24 @@ const Registration = () => {
   };
 
   return (
-    <div className="bg-gray-50 py-12 px-4 min-h-screen">
+    <div className="bg-gray-50 py-6 sm:py-12 px-3 sm:px-4 min-h-screen">
       <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-8 my-12">
-          <h1 className="text-3xl font-extrabold text-gray-900">
+        <div className="text-center mb-6 sm:mb-8 mt-6 sm:mt-12">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
             UNMA 2025 Event Registration
           </h1>
-          <p className="mt-2 text-lg text-gray-600">
+          <p className="mt-2 text-base sm:text-lg text-gray-600">
             Please complete all sections to register for the event
           </p>
 
           {formHasLocalData && (
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-blue-800">
+            <div className="mt-4 p-3 sm:p-4 bg-blue-50 border border-blue-200 rounded-md mx-3 sm:mx-0">
+              <p className="text-sm sm:text-base text-blue-800">
                 We've restored your previously saved data.
               </p>
               <button
                 onClick={clearSavedFormData}
-                className="mt-2 text-sm text-red-600 hover:text-red-800 underline"
+                className="mt-2 text-xs sm:text-sm text-red-600 hover:text-red-800 underline"
               >
                 Clear saved data and start over
               </button>
@@ -642,35 +652,21 @@ const Registration = () => {
 
         <StepIndicator steps={steps} currentStep={currentStep} />
 
-        <form onSubmit={handleSubmit(onStepSubmit)}>
+        <form
+          onSubmit={handleSubmit(onStepSubmit)}
+          className="space-y-4 sm:space-y-6"
+        >
           {/* Step 1: Personal Data */}
           {currentStep === 0 && (
             <>
               <FormSection title="Personal Information">
                 <FormField
-                  label="First Name"
-                  name="firstName"
+                  label="Name"
+                  name="name"
                   type="text"
                   control={control}
                   errors={errors}
                   required={true}
-                />
-
-                <FormField
-                  label="Last Name"
-                  name="lastName"
-                  type="text"
-                  control={control}
-                  errors={errors}
-                  required={true}
-                />
-
-                <FormField
-                  label="Nick Name"
-                  name="nickName"
-                  type="text"
-                  control={control}
-                  errors={errors}
                 />
 
                 <FormField
@@ -693,7 +689,7 @@ const Registration = () => {
                 />
 
                 {email && email.includes("@") && (
-                  <div className="col-span-2">
+                  <div className="w-full">
                     <OtpInput onVerify={handleEmailVerified} email={email} />
                   </div>
                 )}
@@ -709,42 +705,18 @@ const Registration = () => {
                 <FormField
                   label="School"
                   name="school"
-                  type="select"
+                  type="text"
                   control={control}
                   errors={errors}
-                  options={[
-                    { value: "JNV Kannur", label: "JNV Kannur" },
-                    { value: "JNV Kasaragod", label: "JNV Kasaragod" },
-                    { value: "JNV Kozhikode", label: "JNV Kozhikode" },
-                    { value: "JNV Wayanad", label: "JNV Wayanad" },
-                    { value: "JNV Ernakulam", label: "JNV Ernakulam" },
-                    { value: "JNV Idukki", label: "JNV Idukki" },
-                    {
-                      value: "JNV Thiruvananthapuram",
-                      label: "JNV Thiruvananthapuram",
-                    },
-                    { value: "JNV Kollam", label: "JNV Kollam" },
-                    {
-                      value: "JNV Pathanamthitta",
-                      label: "JNV Pathanamthitta",
-                    },
-                    { value: "JNV Kottayam", label: "JNV Kottayam" },
-                    { value: "JNV Palakkad", label: "JNV Palakkad" },
-                    { value: "Others", label: "Others" },
-                  ]}
                   required={true}
                 />
 
                 <FormField
-                  label="Year of Passing 12th"
+                  label="Year of Passing"
                   name="yearOfPassing"
-                  type="select"
+                  type="text"
                   control={control}
                   errors={errors}
-                  options={Array.from({ length: 40 }, (_, i) => ({
-                    value: String(1986 + i),
-                    label: String(1986 + i),
-                  }))}
                   required={true}
                 />
 
