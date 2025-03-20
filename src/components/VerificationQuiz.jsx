@@ -11,7 +11,7 @@ const questions = [
       "Universal Navodaya Mission Association",
       "United Navodaya Members Association",
     ],
-    correctAnswer: 1, // Index of correct answer
+    correctAnswer: 3, // Index of correct answer
   },
   {
     id: 2,
@@ -24,11 +24,11 @@ const questions = [
     question: "What is the motto of JNV?",
     options: [
       "Education for All",
-      "Quality Education",
+      "Pure Knowledge is Brahma",
       "Pace of Progress",
       "Education for Excellence",
     ],
-    correctAnswer: 2,
+    correctAnswer: 1,
   },
 ];
 

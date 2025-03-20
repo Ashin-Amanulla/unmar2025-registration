@@ -495,7 +495,12 @@ const Registration = () => {
   const handleCaptchaVerify = (value) => {
     if (value) {
       setCaptchaVerified(true);
+      setValue("captchaVerified", true);
       toast.success("CAPTCHA verified successfully!");
+      console.log("CAPTCHA verified successfully");
+    } else {
+      setCaptchaVerified(false);
+      setValue("captchaVerified", false);
     }
   };
 
@@ -517,19 +522,23 @@ const Registration = () => {
 
   // Handle email verification
   const handleEmailVerified = (status) => {
+    console.log("Email verification status:", status);
     setEmailVerified(status);
     setValue("emailVerified", status);
     saveFormToLocalStorage();
+    if (status) {
+      toast.success("Email verified successfully!");
+    }
   };
 
   // Validate only the fields in the current step
   const validateCurrentStep = async () => {
     let fieldsToValidate = [];
+    console.log("Validating step:", currentStep);
 
     if (currentStep === 0) {
       fieldsToValidate = [
-        "firstName",
-        "lastName",
+        "name",
         "contactNumber",
         "email",
         "emailVerified",
@@ -553,37 +562,52 @@ const Registration = () => {
         toast.error("Please complete the verification quiz");
         return false;
       }
+      return true; // No fields to validate in step 1, just the quiz
     } else if (currentStep === 2) {
       fieldsToValidate = ["decisionMaker"];
+      return true; // Just basic validation for this step
     } else if (currentStep === 3) {
+      fieldsToValidate = ["keySkills"];
+      return true; // Optional field
+    } else if (currentStep === 4) {
       fieldsToValidate = [
         "travellingFrom",
         "travelDate",
         "modeOfTravel",
-        "transportMode",
+        "needTransport",
       ];
-    } else if (currentStep === 4) {
-      fieldsToValidate = ["accommodationStatus"];
     } else if (currentStep === 5) {
+      fieldsToValidate = ["accommodationStatus"];
+    } else if (currentStep === 6) {
       fieldsToValidate = ["sponsorHelp", "canSpendTime"];
       if (sponsorHelp === "Yes") {
         fieldsToValidate.push("contributionAmount");
       }
     }
 
+    console.log("Fields to validate:", fieldsToValidate);
     // Trigger validation only for the fields in the current step
     const result = await trigger(fieldsToValidate);
+    console.log("Validation errors:", errors);
     return result;
   };
 
   // Handle next button click
   const handleNextStep = async () => {
+    console.log("Attempting to move to next step...");
     const isStepValid = await validateCurrentStep();
+    console.log("Step validation result:", isStepValid);
 
     if (isStepValid) {
-      setCurrentStep((prevStep) => prevStep + 1);
+      setCurrentStep((prevStep) => {
+        const nextStep = prevStep + 1;
+        console.log(`Moving from step ${prevStep} to ${nextStep}`);
+        return nextStep;
+      });
       window.scrollTo(0, 0);
       saveFormToLocalStorage();
+    } else {
+      console.log("Step validation failed, staying on current step");
     }
   };
 
@@ -762,22 +786,30 @@ const Registration = () => {
                       value: "Thiruvananthapuram",
                       label: "Thiruvananthapuram",
                     },
+                    { value: "Other", label: "Other" },
                   ]}
                   required={true}
                 />
-              </FormSection>
 
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                  Verification
-                </h3>
-                <div className="flex justify-center mb-6">
+                {/* Add ReCAPTCHA for verification */}
+                <div className="mt-4 w-full">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Verification <span className="text-red-500">*</span>
+                  </label>
                   <ReCAPTCHA
-                    sitekey="6Leh4foqAAAAAJdvp8w03nOJDyX8pTW2otzI8G42"
+                    sitekey={
+                      import.meta.env.VITE_RECAPTCHA_SITE_KEY ||
+                      "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
+                    }
                     onChange={handleCaptchaVerify}
                   />
+                  {!captchaVerified && (
+                    <p className="mt-1 text-xs text-red-500">
+                      Please complete the CAPTCHA verification
+                    </p>
+                  )}
                 </div>
-              </div>
+              </FormSection>
             </>
           )}
 
@@ -1049,7 +1081,7 @@ const Registration = () => {
               }`}
               disabled={
                 isSubmitting ||
-                (currentStep === 0 && !captchaVerified) ||
+                (currentStep === 0 && (!captchaVerified || !emailVerified)) ||
                 (currentStep === 1 && !quizCompleted)
               }
             >

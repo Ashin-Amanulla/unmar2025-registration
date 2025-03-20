@@ -3,9 +3,7 @@ import { z } from "zod";
 
 const RegistrationSchema = z.object({
     // Personal Data
-    firstName: z.string().min(2, "First name is required"),
-    lastName: z.string().min(2, "Last name is required"),
-    nickName: z.string().optional(),
+    name: z.string().min(2, "Name is required"),
     contactNumber: z.string().min(10, "Valid contact number is required"),
     email: z.string().email("Valid email is required"),
     emailVerified: z.boolean(),
@@ -30,7 +28,8 @@ const RegistrationSchema = z.object({
     travellingFrom: z.string().min(2, "Travel location is required"),
     travelDate: z.string().min(2, "Travel date is required"),
     modeOfTravel: z.string().min(2, "Mode of travel is required"),
-    needTransport: z.string().min(2, "Transport requirement is required"),
+    needTransport: z.string().optional(),
+    transportMode: z.string().optional(),
     coShareSeats: z.number().optional(),
 
     // Accommodation
