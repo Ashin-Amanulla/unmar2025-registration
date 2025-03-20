@@ -7,7 +7,6 @@ import BasicLayout from "./components/layout/BasicLayout";
 const Home = lazy(() => import("./pages/Home"));
 const Registration = lazy(() => import("./pages/Registration"));
 // const Success = lazy(() => import("./pages/Success"));
-const VerifyRegistration = lazy(() => import("./pages/VerifyRegistration"));
 const AdminLogin = lazy(() => import("./pages/admin/Login"));
 const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
 const AdminRegistrations = lazy(() => import("./pages/admin/Registrations"));
@@ -27,7 +26,6 @@ function App() {
               <Route path="/" element={<BasicLayout />} >
                 <Route path="/" element={<Home />} />
                 <Route path="/register" element={<Registration />} />
-                <Route path="/verify" element={<VerifyRegistration />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
               </Route>
 
