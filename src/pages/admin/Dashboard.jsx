@@ -1,129 +1,212 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import useAuthStore from "../../store/authStore";
+import { useAdmin } from "../../hooks/useAdmin";
 import {
   UserGroupIcon,
-  CurrencyDollarIcon,
-  CalendarIcon,
-  ChartBarIcon,
+  CurrencyRupeeIcon,
+  ClipboardDocumentCheckIcon,
+  MapPinIcon,
+  ArrowTrendingUpIcon,
+  UserIcon,
 } from "@heroicons/react/24/outline";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import { Doughnut } from "react-chartjs-2";
+
+ChartJS.register(ArcElement, Tooltip, Legend);
+
+const DashboardCard = ({ title, value, icon: Icon, color, subtext }) => (
+  <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex items-start justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-600">{title}</p>
+        <p className="mt-2 text-3xl font-semibold text-gray-900">{value}</p>
+        {subtext && <p className="mt-1 text-sm text-gray-500">{subtext}</p>}
+      </div>
+      <div className={`p-3 rounded-lg ${color}`}>
+        <Icon className="h-6 w-6 text-white" />
+      </div>
+    </div>
+  </div>
+);
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useAuth();
-  const [stats, setStats] = useState({
-    totalRegistrations: 0,
-    totalContributions: 0,
-    pendingVerifications: 0,
-    activeEvents: 0,
-  });
+  const { isAuthenticated, user } = useAuthStore();
+  const { dashboardStats, isLoadingStats } = useAdmin();
 
-  // Protect route
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/admin/login");
     }
   }, [isAuthenticated, navigate]);
 
-  // Fetch dashboard stats
-  const { data: dashboardStats, isLoading } = useQuery({
-    queryKey: ["dashboardStats"],
-    queryFn: async () => {
-      const response = await fetch("/api/admin/dashboard-stats");
-      if (!response.ok) {
-        throw new Error("Failed to fetch dashboard stats");
-      }
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setStats(data);
-    },
-  });
-
-  const statCards = [
+  const stats = [
     {
       title: "Total Registrations",
-      value: stats.totalRegistrations,
+      value: dashboardStats?.totalRegistrations || 0,
       icon: UserGroupIcon,
       color: "bg-blue-500",
+      subtext: "All time registrations",
     },
     {
-      title: "Total Contributions",
-      value: `₹${stats.totalContributions.toLocaleString()}`,
-      icon: CurrencyDollarIcon,
+      title: "Total Revenue",
+      value: `₹${(dashboardStats?.totalRevenue || 0).toLocaleString()}`,
+      icon: CurrencyRupeeIcon,
       color: "bg-green-500",
+      subtext: "From registration fees",
     },
     {
       title: "Pending Verifications",
-      value: stats.pendingVerifications,
-      icon: CalendarIcon,
+      value: dashboardStats?.pendingVerifications || 0,
+      icon: ClipboardDocumentCheckIcon,
       color: "bg-yellow-500",
+      subtext: "Awaiting verification",
     },
     {
-      title: "Active Events",
-      value: stats.activeEvents,
-      icon: ChartBarIcon,
+      title: "District Coverage",
+      value: dashboardStats?.districtCoverage || 0,
+      icon: MapPinIcon,
       color: "bg-purple-500",
+      subtext: "Districts represented",
+    },
+    {
+      title: "Today's Registrations",
+      value: dashboardStats?.todayRegistrations || 0,
+      icon: ArrowTrendingUpIcon,
+      color: "bg-indigo-500",
+      subtext: "Last 24 hours",
+    },
+    {
+      title: "Active Sub-Admins",
+      value: dashboardStats?.activeSubAdmins || 0,
+      icon: UserIcon,
+      color: "bg-pink-500",
+      subtext: "Managing registrations",
     },
   ];
+
+  // Chart data
+  const chartData = {
+    labels: ["Verified", "Pending", "Rejected"],
+    datasets: [
+      {
+        data: [
+          dashboardStats?.verifiedCount || 0,
+          dashboardStats?.pendingCount || 0,
+          dashboardStats?.rejectedCount || 0,
+        ],
+        backgroundColor: [
+          "rgba(34, 197, 94, 0.8)",
+          "rgba(234, 179, 8, 0.8)",
+          "rgba(239, 68, 68, 0.8)",
+        ],
+        borderColor: [
+          "rgb(34, 197, 94)",
+          "rgb(234, 179, 8)",
+          "rgb(239, 68, 68)",
+        ],
+        borderWidth: 1,
+      },
+    ],
+  };
 
   if (!isAuthenticated) return null;
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900">
           Welcome back, {user?.name || "Admin"}
         </h1>
-        <p className="text-gray-600">
+        <p className="text-gray-600 mt-1">
           Here's what's happening with your registrations today.
         </p>
       </div>
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
+      {isLoadingStats ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
             <div
               key={i}
               className="bg-white p-6 rounded-lg shadow-sm animate-pulse"
             >
-              <div className="h-10 w-10 rounded-full bg-gray-200 mb-4"></div>
-              <div className="h-4 w-24 bg-gray-200 mb-2"></div>
-              <div className="h-6 w-16 bg-gray-200"></div>
+              <div className="flex items-start justify-between">
+                <div className="space-y-3 flex-1">
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                  <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                </div>
+                <div className="h-12 w-12 bg-gray-200 rounded-lg"></div>
+              </div>
             </div>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {statCards.map((stat, index) => (
-            <div
-              key={index}
-              className="bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className={`inline-flex p-3 rounded-lg ${stat.color}`}>
-                <stat.icon className="h-6 w-6 text-white" />
-              </div>
-              <h3 className="mt-4 text-sm font-medium text-gray-600">
-                {stat.title}
-              </h3>
-              <p className="mt-2 text-3xl font-semibold text-gray-900">
-                {stat.value}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {stats.map((stat, index) => (
+              <DashboardCard key={index} {...stat} />
+            ))}
+          </div>
 
-      {/* Recent Activity Section */}
-      <div className="mt-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Recent Activity
-        </h2>
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          {/* Add your recent activity table or list here */}
-        </div>
-      </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Registration Status Chart */}
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Registration Status
+              </h3>
+              <div className="h-[300px] flex items-center justify-center">
+                <Doughnut
+                  data={chartData}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: "bottom",
+                      },
+                    },
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Recent Activity
+              </h3>
+              <div className="space-y-4">
+                {dashboardStats?.recentActivity?.map((activity, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {activity.description}
+                      </p>
+                      <p className="text-xs text-gray-500">{activity.time}</p>
+                    </div>
+                    <span
+                      className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${
+                        activity.type === "registration"
+                          ? "bg-blue-100 text-blue-800"
+                          : activity.type === "verification"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {activity.type}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };

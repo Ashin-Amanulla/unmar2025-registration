@@ -11,9 +11,9 @@ const authApi = {
      * @param {string} password - User password
      * @returns {Promise} - Promise with user data and token
      */
-    login: async (email, password) => {
+    login: async (data ) => {
         try {
-            const response = await axios.post('/auth/login', { email, password });
+            const response = await axios.post('/auth/login', data);
             return response.data;
         } catch (error) {
             throw error.response?.data || { message: 'Login failed' };

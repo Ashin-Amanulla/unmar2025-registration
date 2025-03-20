@@ -64,6 +64,44 @@ const registrationsApi = {
             throw error.response?.data || { message: 'Payment processing failed' };
         }
     },
+
+
+    getAllRegistrations: async () => {
+        try {
+            const response = await axios.get('/registrations');
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || { message: 'Failed to fetch registrations' };
+        }
+    },
+
+    getRegistrationById: async (id) => {
+        try {
+            const response = await axios.get(`/registrations/${id}`);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || { message: 'Failed to fetch registration' };  
+        }
+    },
+
+    deleteRegistration: async (id) => {
+        try {
+            const response = await axios.delete(`/registrations/${id}`);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || { message: 'Failed to delete registration' };
+        }
+    }   ,    
+
+    updateRegistration: async (id, registrationData) => {
+        try {
+            const response = await axios.put(`/registrations/${id}`, registrationData);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || { message: 'Failed to update registration' };
+        }
+    }   
+
 };
 
 export default registrationsApi; 

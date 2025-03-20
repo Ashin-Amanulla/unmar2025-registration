@@ -1,235 +1,196 @@
-import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAdminStore } from '../store';
-import { adminApi } from '../api';
 import { toast } from 'react-toastify';
-
-// Query keys
-const QUERY_KEYS = {
-    STATS: 'adminStats',
+import registrationsApi from '../api/registrationsApi';
+const ADMIN_KEYS = {
+    DASHBOARD_STATS: 'dashboard-stats',
     REGISTRATIONS: 'registrations',
-    SETTINGS: 'adminSettings'
+    SUB_ADMINS: 'sub-admins',
+    ANALYTICS: 'analytics'
 };
 
-// Mock data for development (will be removed in production)
-const mockAdminSettings = {
-    registrationOpen: true,
-    earlyBirdDate: '2023-09-30',
-    earlyBirdPrice: 1000,
-    regularPrice: 1200,
-    vipPrice: 1500,
-    maxCapacity: 500,
-    paymentMethods: ['UPI', 'Bank Transfer', 'Credit Card'],
-    emailNotifications: true,
-    smsNotifications: false,
-    supportEmail: 'support@unma2025.org',
-    supportPhone: '+91 9876543210'
-};
-
-/**
- * Custom admin hook that combines Zustand state with Tanstack Query
- * for managing admin dashboard operations
- */
-export function useAdmin() {
+export const useAdmin = () => {
     const queryClient = useQueryClient();
-    const navigate = useNavigate();
-    const {
-        registrationsFilters,
-        updateRegistrationsFilters,
-        resetRegistrationsFilters
-    } = useAdminStore();
 
-    // Queries
-    const statsQuery = useQuery({
-        queryKey: [QUERY_KEYS.STATS],
+    // Fetch dashboard stats
+    const { data: dashboardStats, isLoading: isLoadingStats } = useQuery({
+        queryKey: [ADMIN_KEYS.DASHBOARD_STATS],
         queryFn: async () => {
-            try {
-                return await adminApi.getDashboardStats();
-            } catch (error) {
-                console.error('Error fetching stats:', error);
-                toast.error('Failed to load dashboard statistics');
-                return null;
-            }
+            const response = await fetch('/api/admin/dashboard-stats');
+            if (!response.ok) throw new Error('Failed to fetch dashboard stats');
+            return response.json();
         },
-        staleTime: 5 * 60 * 1000 // 5 minutes
+        refetchInterval: 30000, // Refetch every 30 seconds
     });
 
-    const registrationsQuery = useQuery({
-        queryKey: [QUERY_KEYS.REGISTRATIONS, registrationsFilters],
-        queryFn: async () => {
-            try {
-                return await adminApi.getRegistrations(registrationsFilters);
-            } catch (error) {
-                console.error('Error fetching registrations:', error);
-                toast.error('Failed to load registrations');
-                return { registrations: [], totalCount: 0, currentPage: 1, totalPages: 1 };
-            }
-        },
-        keepPreviousData: true
-    });
+    // Fetch registrations with filters
+    const useRegistrations = (filters = {}) => {
+        return useQuery({
+            queryKey: [ADMIN_KEYS.REGISTRATIONS, filters],
+            queryFn: async () => {
+                const queryParams = new URLSearchParams(filters).toString();
+                const response = await registrationsApi.getAllRegistrations(queryParams);
+                if (!response.ok) throw new Error('Failed to fetch registrations');
+                return response.json();
+            },
+            keepPreviousData: true,
+        });
+    };
 
-    const settingsQuery = useQuery({
-        queryKey: [QUERY_KEYS.SETTINGS],
-        queryFn: async () => {
-            // In a real app, this would call an API
-            // Simulating an API call with timeout
-            await new Promise(resolve => setTimeout(resolve, 500));
-            return mockAdminSettings;
-        }
-    });
+    // Fetch analytics data
+    const useAnalytics = () => {
+        return useQuery({
+            queryKey: [ADMIN_KEYS.ANALYTICS],
+            queryFn: async () => {
+                const response = await fetch('/api/admin/analytics');
+                if (!response.ok) throw new Error('Failed to fetch analytics data');
+                return response.json();
+            },
+            refetchInterval: 60000, // Refetch every minute
+        });
+    };
 
-    // Login mutation
-    const loginMutation = useMutation({
-        mutationFn: async (credentials) => {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
+    // Fetch sub-admins list
+    const useSubAdmins = () => {
+        return useQuery({
+            queryKey: [ADMIN_KEYS.SUB_ADMINS],
+            queryFn: async () => {
+                const response = await fetch('/api/admin/sub-admins');
+                if (!response.ok) throw new Error('Failed to fetch sub-admins');
+                return response.json();
+            },
+        });
+    };
 
-            // Mock validation (in a real app, this would be server-side)
-            if (credentials.email === 'admin@unma2025.org' && credentials.password === 'admin123') {
-                // Store token
-                localStorage.setItem('adminToken', 'mock-jwt-token');
-                return { success: true };
-            } else {
-                throw new Error('Invalid email or password');
-            }
+    // Create registration
+    const createRegistrationMutation = useMutation({
+        mutationFn: async (data) => {
+            const response = await fetch('/api/admin/registrations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) throw new Error('Failed to create registration');
+            return response.json();
         },
         onSuccess: () => {
-            navigate('/admin/dashboard');
+            queryClient.invalidateQueries([ADMIN_KEYS.REGISTRATIONS]);
+            queryClient.invalidateQueries([ADMIN_KEYS.DASHBOARD_STATS]);
+            queryClient.invalidateQueries([ADMIN_KEYS.ANALYTICS]);
+            toast.success('Registration created successfully');
         },
         onError: (error) => {
-            toast.error(error.message || 'Login failed');
-        }
+            toast.error(error.message || 'Failed to create registration');
+        },
     });
 
-    // Update registration mutation
+    // Update registration
     const updateRegistrationMutation = useMutation({
-        mutationFn: ({ id, data }) => adminApi.updateRegistration(id, data),
-        onMutate: async ({ id, data }) => {
-            await queryClient.cancelQueries({ queryKey: [QUERY_KEYS.REGISTRATIONS] });
-            const previousData = queryClient.getQueryData([QUERY_KEYS.REGISTRATIONS, registrationsFilters]);
-
-            // Optimistically update the cache
-            if (previousData) {
-                queryClient.setQueryData([QUERY_KEYS.REGISTRATIONS, registrationsFilters], old => ({
-                    ...old,
-                    registrations: old.registrations.map(reg =>
-                        reg.id === id ? { ...reg, ...data } : reg
-                    )
-                }));
-            }
-
-            return { previousData };
-        },
-        onError: (err, { id, data }, context) => {
-            if (context?.previousData) {
-                queryClient.setQueryData(
-                    [QUERY_KEYS.REGISTRATIONS, registrationsFilters],
-                    context.previousData
-                );
-            }
-            toast.error('Failed to update registration');
+        mutationFn: async ({ id, data }) => {
+            const response = await fetch(`/api/admin/registrations/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            });
+            if (!response.ok) throw new Error('Failed to update registration');
+            return response.json();
         },
         onSuccess: () => {
+            queryClient.invalidateQueries([ADMIN_KEYS.REGISTRATIONS]);
+            queryClient.invalidateQueries([ADMIN_KEYS.DASHBOARD_STATS]);
+            queryClient.invalidateQueries([ADMIN_KEYS.ANALYTICS]);
             toast.success('Registration updated successfully');
         },
-        onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.REGISTRATIONS] });
-            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.STATS] });
-        }
+        onError: (error) => {
+            toast.error(error.message || 'Failed to update registration');
+        },
     });
 
-    // Update settings mutation
-    const updateSettingsMutation = useMutation({
-        mutationFn: async (settings) => {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            return settings;
+    // Delete registration
+    const deleteRegistrationMutation = useMutation({
+        mutationFn: async (id) => {
+            const response = await fetch(`/api/admin/registrations/${id}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) throw new Error('Failed to delete registration');
+            return response.json();
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.SETTINGS] });
-            toast.success('Settings updated successfully');
+            queryClient.invalidateQueries([ADMIN_KEYS.REGISTRATIONS]);
+            queryClient.invalidateQueries([ADMIN_KEYS.DASHBOARD_STATS]);
+            queryClient.invalidateQueries([ADMIN_KEYS.ANALYTICS]);
+            toast.success('Registration deleted successfully');
         },
-        onError: () => {
-            toast.error('Failed to update settings');
-        }
+        onError: (error) => {
+            toast.error(error.message || 'Failed to delete registration');
+        },
     });
 
-    // Handle searching registrations
-    const handleSearch = (searchTerm) => {
-        updateRegistrationsFilters({ searchTerm, page: 1 });
-    };
-
-    // Handle filter changes
-    const handleFilterChange = (filterName, value) => {
-        updateRegistrationsFilters({ [filterName]: value, page: 1 });
-    };
-
-    // Handle page changes
-    const handlePageChange = (page) => {
-        updateRegistrationsFilters({ page });
-    };
-
-    // Handle export
-    const handleExport = async () => {
-        try {
-            const data = await adminApi.exportRegistrations(registrationsFilters);
-
-            // Create a downloadable blob
-            const blob = new Blob([data], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'registrations.csv';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-
-            toast.success('Export successful');
-        } catch (error) {
-            console.error('Export error:', error);
-            toast.error('Failed to export registrations');
-        }
-    };
-
-    // Prefetch next page
-    const prefetchNextPage = () => {
-        if (registrationsQuery.data?.hasNextPage) {
-            const nextPage = registrationsFilters.page + 1;
-            queryClient.prefetchQuery({
-                queryKey: [QUERY_KEYS.REGISTRATIONS, { ...registrationsFilters, page: nextPage }],
-                queryFn: () => adminApi.getRegistrations({ ...registrationsFilters, page: nextPage })
+    // Create sub-admin
+    const createSubAdminMutation = useMutation({
+        mutationFn: async (data) => {
+            const response = await fetch('/api/admin/sub-admins', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
             });
-        }
-    };
+            if (!response.ok) throw new Error('Failed to create sub-admin');
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries([ADMIN_KEYS.SUB_ADMINS]);
+            queryClient.invalidateQueries([ADMIN_KEYS.DASHBOARD_STATS]);
+            toast.success('Sub-admin created successfully');
+        },
+        onError: (error) => {
+            toast.error(error.message || 'Failed to create sub-admin');
+        },
+    });
+
+    // Delete sub-admin
+    const deleteSubAdminMutation = useMutation({
+        mutationFn: async (id) => {
+            const response = await fetch(`/api/admin/sub-admins/${id}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) throw new Error('Failed to delete sub-admin');
+            return response.json();
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries([ADMIN_KEYS.SUB_ADMINS]);
+            queryClient.invalidateQueries([ADMIN_KEYS.DASHBOARD_STATS]);
+            toast.success('Sub-admin deleted successfully');
+        },
+        onError: (error) => {
+            toast.error(error.message || 'Failed to delete sub-admin');
+        },
+    });
 
     return {
-        // Data
-        stats: statsQuery.data,
-        registrations: registrationsQuery.data,
-        settings: settingsQuery.data,
-        filters: registrationsFilters,
-
-        // Loading states
-        isStatsLoading: statsQuery.isLoading,
-        isRegistrationsLoading: registrationsQuery.isLoading,
-        isSettingsLoading: settingsQuery.isLoading,
-        isLoginLoading: loginMutation.isPending,
-        isUpdatingSettings: updateSettingsMutation.isPending,
-        isUpdatingRegistration: updateRegistrationMutation.isPending,
+        // Queries
+        dashboardStats,
+        isLoadingStats,
+        useRegistrations,
+        useAnalytics,
+        useSubAdmins,
 
         // Mutations
-        login: (credentials) => loginMutation.mutate(credentials),
-        updateSettings: (settings) => updateSettingsMutation.mutate(settings),
-        updateRegistration: (id, data) => updateRegistrationMutation.mutate({ id, data }),
+        createRegistration: createRegistrationMutation.mutate,
+        updateRegistration: updateRegistrationMutation.mutate,
+        deleteRegistration: deleteRegistrationMutation.mutate,
+        createSubAdmin: createSubAdminMutation.mutate,
+        deleteSubAdmin: deleteSubAdminMutation.mutate,
 
-        // Handlers
-        handleSearch,
-        handleFilterChange,
-        handlePageChange,
-        handleExport,
-        resetFilters: resetRegistrationsFilters,
-        prefetchNextPage
+        // Loading states
+        isCreatingRegistration: createRegistrationMutation.isPending,
+        isUpdatingRegistration: updateRegistrationMutation.isPending,
+        isDeletingRegistration: deleteRegistrationMutation.isPending,
+        isCreatingSubAdmin: createSubAdminMutation.isPending,
+        isDeletingSubAdmin: deleteSubAdminMutation.isPending,
     };
-}
-
-export default useAdmin; 
+}; 

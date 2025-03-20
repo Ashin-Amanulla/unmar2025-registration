@@ -7,36 +7,38 @@ import {
   Cog6ToothIcon,
   ArrowLeftOnRectangleIcon,
 } from "@heroicons/react/24/outline";
-import { useAuth } from "../../hooks";
+import useAuthStore from "../../store/authStore";
 import { useAdminStore } from "../../store";
 
 const AdminLayout = () => {
   const navigate = useNavigate();
 
   // Use our custom hooks
-  const { isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { checkAuth, logout, user } = useAuthStore();
   const { sidebarOpen, toggleSidebar, setSidebarOpen } = useAdminStore();
 
   // Check authentication
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
+    console.log("checkAuth", user);
+    if (!checkAuth()) {
       navigate("/admin/login");
     }
-  }, [authLoading, isAuthenticated, navigate]);
+  }, [checkAuth, navigate]);
 
   // Handle logout
   const handleLogout = () => {
     logout();
+    navigate("/admin/login");
   };
 
   // If still checking auth, show loading
-  if (authLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-gray-100">
-        <div className="w-12 h-12 border-4 border-gray-200 rounded-full border-t-primary animate-spin"></div>
-      </div>
-    );
-  }
+  // if (checkAuth()) {
+  //   return (
+  //     <div className="flex h-screen items-center justify-center bg-gray-100">
+  //       <div className="w-12 h-12 border-4 border-gray-200 rounded-full border-t-primary animate-spin"></div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -149,7 +151,9 @@ const AdminLayout = () => {
             </button>
 
             <div className="flex items-center">
-              <span className="text-sm font-medium mr-2">Admin</span>
+              <span className="text-sm font-medium mr-2">
+                {user?.name || "Admin"}
+              </span>
               <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
                 <span className="text-xs font-medium">A</span>
               </div>

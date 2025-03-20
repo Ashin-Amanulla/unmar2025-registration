@@ -773,7 +773,7 @@ const Registration = () => {
                 </h3>
                 <div className="flex justify-center mb-6">
                   <ReCAPTCHA
-                    sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                    sitekey="6Leh4foqAAAAAJdvp8w03nOJDyX8pTW2otzI8G42"
                     onChange={handleCaptchaVerify}
                   />
                 </div>

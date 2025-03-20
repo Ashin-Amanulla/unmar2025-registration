@@ -17,26 +17,39 @@ const useAuthStore = create(
             error: null,
 
             // Actions
-            login: async (email, password) => {
+            login: async (credentials) => {
                 set({ isLoading: true, error: null });
 
                 try {
-                    const data = await authApi.login(email, password);
+                    const response = await authApi.login(credentials);
+                    const { user, token } = response.data;
+                    console.log('response login', user);
 
+                    if (!user || !token) {
+                        throw new Error('Invalid response from server');
+                    }
                     // Store token in localStorage for interceptors
-                    localStorage.setItem('adminToken', data.token);
 
-                    set({
-                        user: data.user,
-                        token: data.token,
+                    set((state) => ({
+                        ...state,
+                        user: user,
+                        token: token,
                         isAuthenticated: true,
                         isLoading: false,
                         error: null
-                    });
+                    }));
 
-                    return data;
+                    localStorage.setItem('adminToken', token);
+                    // Debug check
+                    console.log('State after update:', get());
+
+                    return { user, token };
                 } catch (error) {
+                    localStorage.removeItem('adminToken');
                     set({
+                        user: null,
+                        token: null,
+                        isAuthenticated: false,
                         isLoading: false,
                         error: error.message || 'Login failed'
                     });
@@ -49,7 +62,7 @@ const useAuthStore = create(
 
                 try {
                     // Call API logout (if needed)
-                    await authApi.logout();
+                    // await authApi.logout();
 
                     // Clear local storage
                     localStorage.removeItem('adminToken');
@@ -91,6 +104,7 @@ const useAuthStore = create(
                 try {
                     // Verify token validity with backend
                     const data = await authApi.verifyToken();
+                    console.log('data verify', data);
 
                     set({
                         user: data.user,
