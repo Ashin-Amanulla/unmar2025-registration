@@ -594,8 +594,9 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                   errors={errors}
                   required={true}
                   options={[
-                    { value: "Veg", label: "Vegetarian" },
-                    { value: "Non-Veg", label: "Non-Vegetarian" },
+                    { value: "vegetarian", label: "Vegetarian" },
+                    { value: "non-vegetarian", label: "Non-Vegetarian" },
+                    { value: "both", label: "Both" },
                   ]}
                 />
 
