@@ -33,15 +33,20 @@ const questions = [
 ];
 
 const VerificationQuiz = ({ onQuizComplete }) => {
-  const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [score, setScore] = useState(0);
+  const [isPassed, setIsPassed] = useState(false);
 
   const handleAnswerSelect = (questionId, answerIndex) => {
-    setSelectedAnswers((prev) => ({
-      ...prev,
-      [questionId]: answerIndex,
-    }));
+    // Only allow changes if results are not being shown
+    if (!showResults) {
+      setSelectedAnswers((prev) => ({
+        ...prev,
+        [questionId]: answerIndex,
+      }));
+    }
   };
 
   const handleSubmit = () => {
@@ -55,26 +60,40 @@ const VerificationQuiz = ({ onQuizComplete }) => {
     }
 
     // Calculate score
-    const score = questions.reduce((acc, question) => {
+    const newScore = questions.reduce((acc, question) => {
       return (
         acc + (selectedAnswers[question.id] === question.correctAnswer ? 1 : 0)
       );
     }, 0);
 
     // Need to get at least 2 correct to pass
-    const passed = score >= 2;
+    const passed = newScore >= 2;
+
+    setScore(newScore);
+    setIsPassed(passed);
+    setShowResults(true);
 
     if (passed) {
-      toast.success("Quiz completed successfully!");
-      onQuizComplete(true);
+      toast.success(
+        `Quiz passed! You got ${newScore}/${questions.length} correct.`
+      );
+      setTimeout(() => {
+        onQuizComplete(true);
+      }, 2000); // Give user 2 seconds to see their results before proceeding
     } else {
-      toast.error("Please try again. You need at least 2 correct answers.");
-      // Reset answers
-      setSelectedAnswers({});
-      setCurrentQuestion(0);
+      toast.error(
+        `You got ${newScore}/${questions.length} correct. Need at least 2 correct answers.`
+      );
     }
 
     setIsSubmitting(false);
+  };
+
+  const handleRetry = () => {
+    setSelectedAnswers({});
+    setShowResults(false);
+    setScore(0);
+    setIsPassed(false);
   };
 
   return (
@@ -96,29 +115,92 @@ const VerificationQuiz = ({ onQuizComplete }) => {
             {q.options.map((option, optionIndex) => (
               <label
                 key={optionIndex}
-                className="flex items-center space-x-3 cursor-pointer"
+                className={`flex items-center p-3 space-x-3 cursor-pointer border rounded-md 
+                  ${
+                    showResults && optionIndex === q.correctAnswer
+                      ? "border-green-500 bg-green-50"
+                      : ""
+                  }
+                  ${
+                    showResults &&
+                    selectedAnswers[q.id] === optionIndex &&
+                    optionIndex !== q.correctAnswer
+                      ? "border-red-500 bg-red-50"
+                      : ""
+                  }
+                  ${
+                    !showResults && selectedAnswers[q.id] === optionIndex
+                      ? "border-blue-500 bg-blue-50"
+                      : ""
+                  }
+                  ${
+                    !showResults && selectedAnswers[q.id] !== optionIndex
+                      ? "border-gray-200"
+                      : ""
+                  }
+                  ${showResults ? "cursor-default" : "hover:bg-gray-50"}`}
               >
                 <input
                   type="radio"
                   name={`question-${q.id}`}
                   checked={selectedAnswers[q.id] === optionIndex}
                   onChange={() => handleAnswerSelect(q.id, optionIndex)}
+                  disabled={showResults}
                   className="form-radio h-4 w-4 text-blue-600"
                 />
                 <span className="text-gray-700">{option}</span>
+                {showResults && optionIndex === q.correctAnswer && (
+                  <span className="ml-auto text-green-600">✓ Correct</span>
+                )}
+                {showResults &&
+                  selectedAnswers[q.id] === optionIndex &&
+                  optionIndex !== q.correctAnswer && (
+                    <span className="ml-auto text-red-600">✗ Incorrect</span>
+                  )}
               </label>
             ))}
           </div>
         </div>
       ))}
 
-      <button
-        onClick={handleSubmit}
-        disabled={isSubmitting}
-        className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
-      >
-        {isSubmitting ? "Checking..." : "Submit Answers"}
-      </button>
+      {!showResults ? (
+        <button
+          onClick={handleSubmit}
+          disabled={
+            isSubmitting ||
+            Object.keys(selectedAnswers).length < questions.length
+          }
+          className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
+        >
+          {isSubmitting ? "Checking..." : "Submit Answers"}
+        </button>
+      ) : (
+        <div className="space-y-4">
+          <div
+            className={`p-4 rounded-lg text-center ${
+              isPassed ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"
+            }`}
+          >
+            <p className="font-medium">
+              {isPassed
+                ? `Congratulations! You scored ${score}/${questions.length} and passed.`
+                : `You scored ${score}/${questions.length}. At least 2 correct answers required.`}
+            </p>
+            {isPassed && (
+              <p className="text-sm mt-1">Proceeding to the next step...</p>
+            )}
+          </div>
+
+          {!isPassed && (
+            <button
+              onClick={handleRetry}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+            >
+              Try Again
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
