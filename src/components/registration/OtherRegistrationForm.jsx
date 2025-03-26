@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
 import { RegistrationSchemas } from "../../zod-form-validators/registrationform";
 import { useRegistration } from "../../hooks";
-import VerificationQuiz from "../VerificationQuiz";
+import PhoneInput from "react-phone-input-2";
 import {
   FormSection,
   FormField,
@@ -15,6 +15,27 @@ import {
   MobileProgressIndicator,
 } from "./FormComponents";
 import StepIndicator from "./StepIndicator";
+
+
+import {  indianStatesOptions } from "../../assets/data";
+
+import countries from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
+
+countries.registerLocale(enLocale);
+
+// Get all countries and sort them alphabetically
+const countryOptions = Object.entries(countries.getNames("en"))
+  .map(([code, label]) => ({
+    value: code,
+    label: label,
+  }))
+  .sort((a, b) => a.label.localeCompare(b.label));
+
+
+
+
+
 
 const OtherRegistrationForm = ({ onBack, storageKey }) => {
   const navigate = useNavigate();
@@ -289,52 +310,91 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
               required={true}
             />
 
-            <FormField
-              label="Contact Number"
-              name="contactNumber"
-              type="tel"
-              control={control}
-              errors={errors}
-              required={true}
-            />
+<div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Number *
+              </label>
+              <PhoneInput
+                country={"in"}
+                value={watch("contactNumber")}
+                onChange={(value) => setValue("contactNumber", value)}
+                inputProps={{
+                  name: "contactNumber",
+                  required: true,
+                  className: `w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.contactNumber ? "border-red-500" : "border-gray-300"
+                  }`,
+                }}
+                containerClass="phone-input"
+                buttonClass="border-gray-300"
+                dropdownClass="country-dropdown"
+                searchClass="country-search"
+                searchPlaceholder="Search country..."
+                enableSearch={true}
+                disableSearchIcon={false}
+                searchNotFound="No country found"
+                specialLabel=""
+                enableLongNumbers={true}
+                countryCodeEditable={false}
+                preferredCountries={["in", "us", "gb", "ae"]}
+              />
+              {errors.contactNumber && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.contactNumber.message}
+                </p>
+              )}
+            </div>
 
-            <FormField
-              label="WhatsApp Number (if different)"
-              name="whatsappNumber"
-              type="tel"
-              control={control}
-              errors={errors}
-            />
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                WhatsApp Number (if different)
+              </label>
+              <PhoneInput
+                country={"in"}
+                value={watch("whatsappNumber")}
+                onChange={(value) => setValue("whatsappNumber", value)}
+                inputProps={{
+                  name: "whatsappNumber",
+                  className: `w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.whatsappNumber ? "border-red-500" : "border-gray-300"
+                  }`,
+                }}
+                containerClass="phone-input"
+                buttonClass="border-gray-300"
+                dropdownClass="country-dropdown"
+                searchClass="country-search"
+                searchPlaceholder="Search country..."
+                enableSearch={true}
+                disableSearchIcon={false}
+                searchNotFound="No country found"
+                specialLabel=""
+                enableLongNumbers={true}
+                countryCodeEditable={false}
+                preferredCountries={["in", "us", "gb", "ae"]}
+              />
+              {errors.whatsappNumber && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.whatsappNumber.message}
+                </p>
+              )}
+            </div>
 
-            <FormField
-              label="Purpose of Attending"
-              name="purpose"
-              type="textarea"
-              control={control}
-              errors={errors}
-              required={true}
-              placeholder="Please describe your purpose for attending the UNMA 2025 event and your connection to JNV"
-            />
-
-            <FormField
+             <FormField
               label="Country"
               name="country"
               type="select"
               control={control}
               errors={errors}
               required={true}
-              options={[
-                { value: "India", label: "India" },
-                { value: "UAE", label: "UAE" },
-                { value: "USA", label: "USA" },
-                { value: "UK", label: "UK" },
-                { value: "Canada", label: "Canada" },
-                { value: "Australia", label: "Australia" },
-                { value: "Other", label: "Other" },
-              ]}
+              options={countryOptions}
+              placeholder="Select your country"
+              isSearchable={true}
+              isClearable={false}
+              className="react-select-container"
+              classNamePrefix="react-select"
             />
 
-            {watch("country") === "India" && (
+            {watch("country") === "IN" && (
               <FormField
                 label="State/UT"
                 name="stateUT"
@@ -342,52 +402,9 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
                 control={control}
                 errors={errors}
                 required={true}
-                options={[
-                  { value: "Andhra Pradesh", label: "Andhra Pradesh" },
-                  { value: "Arunachal Pradesh", label: "Arunachal Pradesh" },
-                  { value: "Assam", label: "Assam" },
-                  { value: "Bihar", label: "Bihar" },
-                  { value: "Chhattisgarh", label: "Chhattisgarh" },
-                  { value: "Goa", label: "Goa" },
-                  { value: "Gujarat", label: "Gujarat" },
-                  { value: "Haryana", label: "Haryana" },
-                  { value: "Himachal Pradesh", label: "Himachal Pradesh" },
-                  { value: "Jharkhand", label: "Jharkhand" },
-                  { value: "Karnataka", label: "Karnataka" },
-                  { value: "Kerala", label: "Kerala" },
-                  { value: "Madhya Pradesh", label: "Madhya Pradesh" },
-                  { value: "Maharashtra", label: "Maharashtra" },
-                  { value: "Manipur", label: "Manipur" },
-                  { value: "Meghalaya", label: "Meghalaya" },
-                  { value: "Mizoram", label: "Mizoram" },
-                  { value: "Nagaland", label: "Nagaland" },
-                  { value: "Odisha", label: "Odisha" },
-                  { value: "Punjab", label: "Punjab" },
-                  { value: "Rajasthan", label: "Rajasthan" },
-                  { value: "Sikkim", label: "Sikkim" },
-                  { value: "Tamil Nadu", label: "Tamil Nadu" },
-                  { value: "Telangana", label: "Telangana" },
-                  { value: "Tripura", label: "Tripura" },
-                  { value: "Uttar Pradesh", label: "Uttar Pradesh" },
-                  { value: "Uttarakhand", label: "Uttarakhand" },
-                  { value: "West Bengal", label: "West Bengal" },
-                  {
-                    value: "Andaman and Nicobar Islands",
-                    label: "Andaman and Nicobar Islands",
-                  },
-                  { value: "Chandigarh", label: "Chandigarh" },
-                  {
-                    value: "Dadra and Nagar Haveli and Daman and Diu",
-                    label: "Dadra and Nagar Haveli and Daman and Diu",
-                  },
-                  { value: "Delhi", label: "Delhi" },
-                  { value: "Jammu and Kashmir", label: "Jammu and Kashmir" },
-                  { value: "Ladakh", label: "Ladakh" },
-                  { value: "Lakshadweep", label: "Lakshadweep" },
-                  { value: "Puducherry", label: "Puducherry" },
-                ]}
+                options={indianStatesOptions}
               />
-            )}
+            )}  
           </FormSection>
         )}
 
