@@ -14,7 +14,7 @@ const CreateRegistration = lazy(() => import("./pages/admin/CreateRegistration")
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Analytics = lazy(() => import("./pages/admin/Analytics"));
 const Settings = lazy(() => import("./pages/admin/Settings"));
-
+const RegistrationSuccess = lazy(() => import("./pages/RegistrationSuccess"));
 function App() {
   return (
     <Router>
@@ -27,6 +27,7 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/register" element={<Registration />} />
                 <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/registration-success" element={<RegistrationSuccess />} />
               </Route>
 
               {/* Admin Routes */}

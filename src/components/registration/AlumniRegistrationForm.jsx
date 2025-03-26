@@ -6,6 +6,12 @@ import { toast } from "react-toastify";
 import { RegistrationSchemas } from "../../zod-form-validators/registrationform";
 import { useRegistration } from "../../hooks";
 import VerificationQuiz from "../VerificationQuiz";
+import PhoneInput from "react-phone-input-2";
+import "react-phone-input-2/lib/style.css";
+import "../../styles/phone-input.css";
+import Select from "react-select";
+import countries from "i18n-iso-countries";
+import enLocale from "i18n-iso-countries/langs/en.json";
 import {
   FormSection,
   FormField,
@@ -15,6 +21,17 @@ import {
   MobileProgressIndicator,
 } from "./FormComponents";
 import StepIndicator from "./StepIndicator";
+
+// Initialize countries data
+countries.registerLocale(enLocale);
+
+// Get all countries and sort them alphabetically
+const countryOptions = Object.entries(countries.getNames("en"))
+  .map(([code, label]) => ({
+    value: code,
+    label: label,
+  }))
+  .sort((a, b) => a.label.localeCompare(b.label));
 
 const AlumniRegistrationForm = ({ onBack, storageKey }) => {
   const navigate = useNavigate();
@@ -299,9 +316,10 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       if (data.isAttending) {
         data.proposedAmount = data.totalVeg * 500 + data.totalNonVeg * 500;
       }
+      console.log(data);
 
       // Submit registration
-      const result = await submitRegistration(data);
+      // const result = await submitRegistration(data);
 
       // Clear saved data on successful submission
       localStorage.removeItem(storageKey);
@@ -309,7 +327,8 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
       toast.success("Registration submitted successfully!");
       navigate("/registration-success", {
-        state: { registrationId: result.registrationId },
+        // state: { registrationId: result.registrationId },
+        state: { registrationId: "1234567890" },
       });
     } catch (error) {
       console.error("Registration error:", error);
@@ -387,22 +406,74 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
               required={true}
             />
 
-            <FormField
-              label="Contact Number"
-              name="contactNumber"
-              type="tel"
-              control={control}
-              errors={errors}
-              required={true}
-            />
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Number *
+              </label>
+              <PhoneInput
+                country={"in"}
+                value={watch("contactNumber")}
+                onChange={(value) => setValue("contactNumber", value)}
+                inputProps={{
+                  name: "contactNumber",
+                  required: true,
+                  className: `w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.contactNumber ? "border-red-500" : "border-gray-300"
+                  }`,
+                }}
+                containerClass="phone-input"
+                buttonClass="border-gray-300"
+                dropdownClass="country-dropdown"
+                searchClass="country-search"
+                searchPlaceholder="Search country..."
+                enableSearch={true}
+                disableSearchIcon={false}
+                searchNotFound="No country found"
+                specialLabel=""
+                enableLongNumbers={true}
+                countryCodeEditable={false}
+                preferredCountries={["in", "us", "gb", "ae"]}
+              />
+              {errors.contactNumber && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.contactNumber.message}
+                </p>
+              )}
+            </div>
 
-            <FormField
-              label="WhatsApp Number (if different)"
-              name="whatsappNumber"
-              type="tel"
-              control={control}
-              errors={errors}
-            />
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                WhatsApp Number (if different)
+              </label>
+              <PhoneInput
+                country={"in"}
+                value={watch("whatsappNumber")}
+                onChange={(value) => setValue("whatsappNumber", value)}
+                inputProps={{
+                  name: "whatsappNumber",
+                  className: `w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.whatsappNumber ? "border-red-500" : "border-gray-300"
+                  }`,
+                }}
+                containerClass="phone-input"
+                buttonClass="border-gray-300"
+                dropdownClass="country-dropdown"
+                searchClass="country-search"
+                searchPlaceholder="Search country..."
+                enableSearch={true}
+                disableSearchIcon={false}
+                searchNotFound="No country found"
+                specialLabel=""
+                enableLongNumbers={true}
+                countryCodeEditable={false}
+                preferredCountries={["in", "us", "gb", "ae"]}
+              />
+              {errors.whatsappNumber && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.whatsappNumber.message}
+                </p>
+              )}
+            </div>
 
             <FormField
               label="JNV School"
@@ -416,19 +487,18 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 { value: "JNV Kannur", label: "JNV Kannur" },
                 { value: "JNV Kozhikode", label: "JNV Kozhikode" },
                 { value: "JNV Wayanad", label: "JNV Wayanad" },
-                { value: "JNV Malappuram", label: "JNV Malappuram" },
                 { value: "JNV Palakkad", label: "JNV Palakkad" },
-                { value: "JNV Thrissur", label: "JNV Thrissur" },
                 { value: "JNV Ernakulam", label: "JNV Ernakulam" },
                 { value: "JNV Idukki", label: "JNV Idukki" },
                 { value: "JNV Kottayam", label: "JNV Kottayam" },
-                { value: "JNV Alappuzha", label: "JNV Alappuzha" },
                 { value: "JNV Pathanamthitta", label: "JNV Pathanamthitta" },
                 { value: "JNV Kollam", label: "JNV Kollam" },
                 {
                   value: "JNV Thiruvananthapuram",
                   label: "JNV Thiruvananthapuram",
                 },
+                { value: "JNV Lakshadweep", label: "JNV Lakshadweep" },
+                { value: "JNV Mahe", label: "JNV Mahe" },
                 { value: "Other", label: "Other" },
               ]}
             />
@@ -453,18 +523,15 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
               control={control}
               errors={errors}
               required={true}
-              options={[
-                { value: "India", label: "India" },
-                { value: "UAE", label: "UAE" },
-                { value: "USA", label: "USA" },
-                { value: "UK", label: "UK" },
-                { value: "Canada", label: "Canada" },
-                { value: "Australia", label: "Australia" },
-                { value: "Other", label: "Other" },
-              ]}
+              options={countryOptions}
+              placeholder="Select your country"
+              isSearchable={true}
+              isClearable={false}
+              className="react-select-container"
+              classNamePrefix="react-select"
             />
 
-            {watch("country") === "India" && (
+            {watch("country") === "IN" && (
               <FormField
                 label="State/UT"
                 name="stateUT"
@@ -771,10 +838,17 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
               required={true}
               options={[
                 { value: "not-required", label: "I don't need accommodation" },
-                { value: "need", label: "I need accommodation" },
+                {
+                  value: "need",
+                  label: "I can share accommodation with fellow navodayans",
+                },
                 {
                   value: "provide",
                   label: "I can provide accommodation to others",
+                },
+                {
+                  value: "discount-hotel",
+                  label: "I need discount hotel booking",
                 },
               ]}
             />
@@ -827,8 +901,12 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                   Based on your meal selections, your estimated contribution
                   would be ₹
                   {(watch("totalVeg") || 0) * 500 +
-                    (watch("totalNonVeg") || 0) * 500}
-                  .
+                    (watch("totalNonVeg") || 0) * 500 +
+                    (watch("isAttending") ? 500 : 0)}
+                  for {(watch("totalVeg") || 0) * 1 +
+                    (watch("totalNonVeg") || 0) * 1 +
+                    (watch("isAttending") ? 1 : 0)} 
+                  people.
                 </p>
               )}
             </div>
