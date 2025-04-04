@@ -180,7 +180,9 @@ const Home = () => {
                   <h3 className="text-white text-2xl font-medium mb-8">
                     Event Starts In
                   </h3>
-                  <CountdownTimer />
+                  <div className="flex justify-center">
+                    <CountdownTimer />
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-6 justify-center">
