@@ -18,6 +18,7 @@ const Analytics = lazy(() => import("./pages/admin/Analytics"));
 const Settings = lazy(() => import("./pages/admin/Settings"));
 const RegistrationSuccess = lazy(() => import("./pages/RegistrationSuccess"));
 import ReportIssue from "./pages/ReportIssue";
+import AlumniRegistrationForm from "./components/registration/AlumniRegistrationForm";
 
 function App() {
   return (

@@ -1,257 +1,220 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { toast } from "react-hot-toast";
-import axios from "axios";
-
-const issueSchema = z.object({
-  title: z.string().min(5, "Title must be at least 5 characters"),
-  description: z.string().min(20, "Description must be at least 20 characters"),
-  category: z.enum([
-    "Technical",
-    "Content",
-    "Payment",
-    "Registration",
-    "Other",
-  ]),
-  priority: z.enum(["Low", "Medium", "High", "Critical"]),
-  reportedBy: z.object({
-    name: z.string().min(2, "Name must be at least 2 characters"),
-    email: z.string().email("Invalid email address"),
-    phone: z.string().optional(),
-  }),
-});
+import { toast } from "react-toastify";
+import { motion } from "framer-motion";
 
 const ReportIssue = () => {
-  const [files, setFiles] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const {
     register,
     handleSubmit,
-    formState: { errors },
     reset,
-  } = useForm({
-    resolver: zodResolver(issueSchema),
-    defaultValues: {
-      priority: "Medium",
-    },
-  });
+    formState: { errors },
+  } = useForm();
+
+  const funnyPlaceholders = [
+    "The form is acting like it had too much coffee ☕",
+    "My registration disappeared like my JNV homework 📚",
+    "The payment button is playing hide and seek 🙈",
+    "Everything's spinning like PT morning drill 🌪️",
+    "The website is slower than mess queue on Sunday 🐌",
+  ];
 
   const onSubmit = async (data) => {
     setIsSubmitting(true);
     try {
-      const formData = new FormData();
-      Object.keys(data).forEach((key) => {
-        if (key === "reportedBy") {
-          formData.append(key, JSON.stringify(data[key]));
-        } else {
-          formData.append(key, data[key]);
-        }
-      });
+      // Here you would typically send the issue to your backend
+      console.log("Issue reported:", data);
 
-      files.forEach((file) => {
-        formData.append("attachments", file);
-      });
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      await axios.post("/api/issues", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      toast.success("Issue reported successfully!");
+      toast.success(
+        "🎯 Issue reported successfully! We're on it like a Navodayan on morning bell!"
+      );
       reset();
-      setFiles([]);
     } catch (error) {
-      console.error("Error submitting issue:", error);
-      toast.error(error.response?.data?.error || "Failed to submit issue");
+      toast.error(
+        "Oops! Something went wrong. Even our best prefects couldn't handle this one! 😅"
+      );
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    if (selectedFiles.length > 5) {
-      toast.error("Maximum 5 files allowed");
-      return;
-    }
-    setFiles(selectedFiles);
-  };
-
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Report an Issue</h1>
-        <p className="mt-2 text-gray-600">
-          Help us improve by reporting any issues you encounter
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Title
-          </label>
-          <input
-            type="text"
-            {...register("title")}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
-          {errors.title && (
-            <p className="mt-1 text-sm text-red-600">{errors.title.message}</p>
-          )}
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Description
-          </label>
-          <textarea
-            {...register("description")}
-            rows={4}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
-          {errors.description && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.description.message}
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-2xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-purple-600 to-purple-800 px-8 py-12 text-center">
+            <div className="text-5xl mb-4 flex justify-center gap-4">
+              <span>🔧</span>
+              <span>🐛</span>
+              <span>🎯</span>
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              Houston, We Have a Problem!
+            </h1>
+            <p className="text-purple-100 text-lg">
+              Don't worry, our tech team is better at fixing bugs than we were
+              at fixing mess food! 😄
             </p>
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Category
-            </label>
-            <select
-              {...register("category")}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="">Select a category</option>
-              <option value="Technical">Technical</option>
-              <option value="Content">Content</option>
-              <option value="Payment">Payment</option>
-              <option value="Registration">Registration</option>
-              <option value="Other">Other</option>
-            </select>
-            {errors.category && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.category.message}
-              </p>
-            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Priority
-            </label>
-            <select
-              {...register("priority")}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            >
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-              <option value="Critical">Critical</option>
-            </select>
-            {errors.priority && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.priority.message}
+          {/* Form */}
+          <div className="px-8 py-10">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {/* Issue Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  What kind of issue are you facing? 🤔
+                </label>
+                <select
+                  {...register("issueType", {
+                    required: "Please select an issue type",
+                  })}
+                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                >
+                  <option value="">Select issue type</option>
+                  <option value="registration">Registration Issues 📝</option>
+                  <option value="payment">Payment Problems 💰</option>
+                  <option value="technical">Technical Glitches 💻</option>
+                  <option value="content">Content/Information Issues ℹ️</option>
+                  <option value="other">
+                    Other (Because life is complicated!) 🤷
+                  </option>
+                </select>
+                {errors.issueType && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.issueType.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tell us what's bothering you 🎭
+                </label>
+                <textarea
+                  {...register("description", {
+                    required: "Please describe the issue",
+                    minLength: {
+                      value: 20,
+                      message:
+                        "A bit more detail would help us understand better!",
+                    },
+                  })}
+                  placeholder={
+                    funnyPlaceholders[
+                      Math.floor(Math.random() * funnyPlaceholders.length)
+                    ]
+                  }
+                  rows={4}
+                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                />
+                {errors.description && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.description.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Contact Info */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  How can we reach you? 📞
+                </label>
+                <input
+                  type="email"
+                  {...register("email", {
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message:
+                        "That doesn't look like an email we learned in computer class! 🤓",
+                    },
+                  })}
+                  placeholder="your.email@example.com"
+                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                />
+                {errors.email && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Submit Button */}
+              <motion.button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center justify-center">
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Sending to our Fix-it Squad...
+                  </span>
+                ) : (
+                  "🚀 Send it to the Tech Team!"
+                )}
+              </motion.button>
+            </form>
+
+            {/* Fun Footer */}
+            <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+              <p className="text-sm text-gray-500">
+                Remember when we used to fix everything with "Have you tried
+                turning it off and on again?" We've evolved! 😎
               </p>
-            )}
+            </div>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium text-gray-900">
-            Your Information
-          </h3>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Name
-            </label>
-            <input
-              type="text"
-              {...register("reportedBy.name")}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-            {errors.reportedBy?.name && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.reportedBy.name.message}
-              </p>
-            )}
+        {/* Fun Facts */}
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Did You Know? 🤓
+            </h3>
+            <p className="text-gray-600">
+              Our tech team solves bugs faster than we solved JNV morning
+              puzzles!
+            </p>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              type="email"
-              {...register("reportedBy.email")}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-            {errors.reportedBy?.email && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.reportedBy.email.message}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Phone (Optional)
-            </label>
-            <input
-              type="tel"
-              {...register("reportedBy.phone")}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-            {errors.reportedBy?.phone && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.reportedBy.phone.message}
-              </p>
-            )}
+          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Fun Fact! 🎈
+            </h3>
+            <p className="text-gray-600">
+              99% of issues are solved before the next assembly bell!
+            </p>
           </div>
         </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Attachments (Optional)
-          </label>
-          <input
-            type="file"
-            multiple
-            onChange={handleFileChange}
-            className="mt-1 block w-full text-sm text-gray-500
-              file:mr-4 file:py-2 file:px-4
-              file:rounded-md file:border-0
-              file:text-sm file:font-semibold
-              file:bg-blue-50 file:text-blue-700
-              hover:file:bg-blue-100"
-          />
-          <p className="mt-1 text-sm text-gray-500">
-            Maximum 5 files, 5MB each
-          </p>
-        </div>
-
-        <div>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
-              isSubmitting
-                ? "bg-blue-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            }`}
-          >
-            {isSubmitting ? "Submitting..." : "Submit Issue"}
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   );
 };

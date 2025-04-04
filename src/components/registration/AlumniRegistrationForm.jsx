@@ -9,6 +9,7 @@ import VerificationQuiz from "../VerificationQuiz";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import "../../styles/phone-input.css";
+import "../../styles/date-time-pickers.css";
 import countries from "i18n-iso-countries";
 import enLocale from "i18n-iso-countries/langs/en.json";
 import {
@@ -19,6 +20,7 @@ import {
   NavigationButtons,
   MobileProgressIndicator,
 } from "./FormComponents";
+import { getPincodeDetails } from "../../api/pincodeApi";
 import StepIndicator from "./StepIndicator";
 import { jnvSchools, indianStatesOptions } from "../../assets/data";
 import SponsorshipCards from "./SponsorshipCards";
@@ -27,6 +29,14 @@ import { motion } from "framer-motion";
 import AlertDialog from "../ui/AlertDialog";
 import { Checkbox } from "../ui/Checkbox";
 import { usePayment } from "../../hooks/usePayment";
+import {
+  MENTORSHIP_OPTIONS,
+  TRAINING_OPTIONS,
+  SEMINAR_OPTIONS,
+  TSHIRT_SIZES,
+  DEFAULT_TSHIRT_SIZES,
+  PROFESSION_OPTIONS,
+} from "../../assets/data";
 // Initialize countries data
 countries.registerLocale(enLocale);
 
@@ -37,47 +47,6 @@ const countryOptions = Object.entries(countries.getNames("en"))
     label: label,
   }))
   .sort((a, b) => a.label.localeCompare(b.label));
-
-// Add new constants for options
-const MENTORSHIP_OPTIONS = [
-  { value: "students", label: "Students" },
-  { value: "young_alumni", label: "Young Alumni" },
-  { value: "career_guidance", label: "Career Guidance" },
-  { value: "startup_mentoring", label: "Startup Mentoring" },
-];
-
-const TRAINING_OPTIONS = [
-  { value: "technical", label: "Technical Skills" },
-  { value: "soft_skills", label: "Soft Skills" },
-  { value: "leadership", label: "Leadership" },
-  { value: "entrepreneurship", label: "Entrepreneurship" },
-];
-
-const SEMINAR_OPTIONS = [
-  { value: "technical", label: "Technical Topics" },
-  { value: "career", label: "Career Development" },
-  { value: "industry", label: "Industry Trends" },
-  { value: "personal", label: "Personal Growth" },
-];
-
-const TSHIRT_SIZES = [
-  { value: "S", label: "Small" },
-  { value: "M", label: "Medium" },
-  { value: "L", label: "Large" },
-  { value: "XL", label: "Extra Large" },
-  { value: "XXL", label: "2X Large" },
-  { value: "XXXL", label: "3X Large" },
-];
-
-// Add this constant at the top with other constants
-const DEFAULT_TSHIRT_SIZES = {
-  S: 0,
-  M: 0,
-  L: 0,
-  XL: 0,
-  XXL: 0,
-  XXXL: 0,
-};
 
 const AlumniRegistrationForm = ({ onBack, storageKey }) => {
   const navigate = useNavigate();
@@ -110,8 +79,8 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
     "Sponsorship",
     "Transportation",
     "Accommodation",
-    "Financial",
     "Optional",
+    "Financial",
   ];
 
   // Set up form with Zod validation
@@ -162,6 +131,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       travellingFrom: "",
       travelDateTime: "",
       modeOfTravel: undefined,
+      pincode: "",
       needParking: false,
       carPooling: "No",
       coShareSeats: 0,
@@ -326,15 +296,23 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       // Transportation
       if (isAttending) {
         fieldsToValidate = [
-          "travellingFrom",
-          "travelDateTime",
-          "modeOfTravel",
-          "needParking",
-          "carPooling",
+          "startPincode",
+          "travelDate",
+          "travelTime",
+          "modeOfTransport",
         ];
 
-        if (carPooling !== "No") {
-          fieldsToValidate.push("coShareSeats");
+        if (watch("modeOfTransport") === "car") {
+          fieldsToValidate.push("readyForRideShare");
+          if (watch("readyForRideShare") === "yes") {
+            fieldsToValidate.push("rideShareCapacity");
+          }
+          fieldsToValidate.push("needParking");
+        } else {
+          fieldsToValidate.push("wantRideShare");
+          if (watch("wantRideShare") === "yes") {
+            fieldsToValidate.push("rideShareGroupSize");
+          }
         }
       } else {
         return true;
@@ -351,6 +329,9 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         return true;
       }
     } else if (currentStep === 7) {
+      // Optional fields
+      return true;
+    } else if (currentStep === 8) {
       // Financial contribution
       const contributionAmount = watch("contributionAmount");
       if (
@@ -360,9 +341,6 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         toast.error("Please enter a contribution amount");
         return false;
       }
-      return true;
-    } else if (currentStep === 8) {
-      // Optional fields
       return true;
     }
 
@@ -388,38 +366,51 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
   // Handle form submission
   const onSubmit = async (data) => {
-    setIsSubmitting(true);
-
     try {
-      // Calculate proposed contribution based on attendance
-      if (data.isAttending) {
-        data.proposedAmount = data.totalVeg * 500 + data.totalNonVeg * 500;
-      }
-      console.log(data);
+      setIsSubmitting(true);
+      console.log("Submitting registration data:", data);
 
-      // Submit registration
-      // const result = await submitRegistration(data);
+      // Submit registration data
+      // await submitRegistration(data);
 
-      // Clear saved data on successful submission
+      // Clear saved data
       localStorage.removeItem(storageKey);
       localStorage.removeItem(`${storageKey}-step`);
 
-      toast.success("Registration submitted successfully!");
-      navigate("/registration-success", {
-        // state: { registrationId: result.registrationId },
-        state: { registrationId: "1234567890" },
-      });
+      // Show success message
+      toast.success("🎉 Registration completed successfully!");
+
+      // Use direct window location change for reliable redirect
+      setTimeout(() => {
+        window.location.href = "/registration-success";
+      }, 1000); // Small delay to ensure toast is visible
     } catch (error) {
       console.error("Registration error:", error);
       toast.error("Registration submission failed. Please try again.");
-    } finally {
       setIsSubmitting(false);
     }
   };
 
   // Handle final submit button click
-  const handleSubmitForm = () => {
-    handleSubmit(onSubmit)();
+  const handleSubmitForm = async () => {
+    if (!hasPreviousContribution) {
+      toast.error(
+        "Please complete your contribution payment before submitting"
+      );
+      return;
+    }
+
+    try {
+      // Get form data
+      const formData = getValues();
+      console.log("Submitting form with data:", formData);
+
+      // Directly call onSubmit with form data
+      await onSubmit(formData);
+    } catch (error) {
+      console.error("Form submission error:", error);
+      toast.error("Form submission failed. Please try again.");
+    }
   };
 
   const handlePayment = async () => {
@@ -446,7 +437,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         ) {
           setAlertDialogConfig({
             title: "Contribution Amount Warning",
-            message: `Your contribution (₹${contributionAmount}) is less than the estimated expenses (₹${totalExpense}) for your group. Would you like to continue with the current amount?`,
+            message: `Your contribution (₹${contributionAmount}) is less than the estimated expenses (₹${totalExpense}) for your group. Would you like to add more to the current amount?`,
             onConfirm: () => proceedWithPayment(contributionAmount),
           });
           setShowAlertDialog(true);
@@ -476,20 +467,41 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         setValue("paymentId", response.razorpay_payment_id);
         setHasPreviousContribution(true);
         setPreviousContributionAmount(contributionAmount);
-        handleNextStep();
+
+        // Show simple success toast instead of alert dialog
+        toast.success(
+          "Payment successful! You can now submit your registration."
+        );
       },
       onFailure: (error) => {
         console.error("Payment failed:", error);
+        toast.error("Payment failed. Please try again.");
       },
     });
   };
 
   // Add useEffect to show mission message when entering financial step
   useEffect(() => {
-    if (currentStep === 7) {
+    if (currentStep === 8) {
       setShowMissionMessage(true);
     }
   }, [currentStep]);
+
+  // Handle skipping optional step
+  const handleSkipOptional = () => {
+    // Clear all optional fields
+    setValue("spouseNavodayan", "");
+    setValue("unmaFamilyGroups", "No");
+    setValue("mentorshipOptions", []);
+    setValue("trainingOptions", []);
+    setValue("seminarOptions", []);
+    setValue("tshirtInterest", "no");
+    setValue("tshirtSizes", DEFAULT_TSHIRT_SIZES);
+
+    // Move to next step
+    setCurrentStep((prevStep) => prevStep + 1);
+    window.scrollTo(0, 0);
+  };
 
   return (
     <>
@@ -518,7 +530,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         {/* Verification Step */}
         {currentStep === 0 && (
           <>
-            <FormSection title="Email Verification">
+            <FormSection title="Contact Verification">
               <FormField
                 label="Email Address"
                 name="email"
@@ -528,16 +540,120 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 required={true}
                 disabled={emailVerified}
               />
-
-              {email && email.includes("@") && (
-                <OtpInput onVerify={handleEmailVerified} email={email} />
+              <PhoneInput
+                country={"in"}
+                value={watch("contactNumber")}
+                onChange={(value) => setValue("contactNumber", value)}
+                inputProps={{
+                  name: "contactNumber",
+                  required: true,
+                  className: `w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.contactNumber ? "border-red-500" : "border-gray-300"
+                  }`,
+                }}
+                containerClass="phone-input"
+                buttonClass="border-gray-300"
+                dropdownClass="country-dropdown"
+                searchClass="country-search"
+                searchPlaceholder="Search country..."
+                enableSearch={true}
+                disableSearchIcon={false}
+                searchNotFound="No country found"
+                specialLabel=""
+                enableLongNumbers={true}
+                countryCodeEditable={false}
+                disabled={emailVerified}
+                preferredCountries={["in", "us", "gb", "ae"]}
+              />
+              {errors.contactNumber && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.contactNumber.message}
+                </p>
               )}
 
-              <CaptchaVerification onVerify={handleCaptchaVerified} />
+              {!emailVerified &&
+                email &&
+                email.includes("@") &&
+                watch("contactNumber") && (
+                  <OtpInput
+                    onVerify={handleEmailVerified}
+                    email={email}
+                    phone={watch("contactNumber")}
+                  />
+                )}
+
+              {emailVerified && (
+                <div className="flex items-center gap-2 mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <svg
+                    className="h-6 w-6 text-green-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <span className="text-green-800 font-medium">
+                    Email & Phone Verified
+                  </span>
+                </div>
+              )}
+
+              {!captchaVerified && (
+                <CaptchaVerification onVerify={handleCaptchaVerified} />
+              )}
+
+              {captchaVerified && (
+                <div className="flex items-center gap-2 mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <svg
+                    className="h-6 w-6 text-green-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <span className="text-green-800 font-medium">
+                    CAPTCHA Verified
+                  </span>
+                </div>
+              )}
             </FormSection>
 
             <FormSection title="JNV Background Verification">
-              <VerificationQuiz onQuizComplete={handleQuizComplete} />
+              {!quizCompleted && (
+                <VerificationQuiz onQuizComplete={handleQuizComplete} />
+              )}
+
+              {quizCompleted && (
+                <div className="flex items-center gap-2 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <svg
+                    className="h-6 w-6 text-green-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <span className="text-green-800 font-medium">
+                    Background Verification Completed
+                  </span>
+                </div>
+              )}
             </FormSection>
           </>
         )}
@@ -578,6 +694,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 disableSearchIcon={false}
                 searchNotFound="No country found"
                 specialLabel=""
+                disabled={emailVerified}
                 enableLongNumbers={true}
                 countryCodeEditable={false}
                 preferredCountries={["in", "us", "gb", "ae"]}
@@ -691,6 +808,19 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 options={indianStatesOptions}
               />
             )}
+
+            {watch("stateUT") === "Kerala" && (
+              <FormField
+                label="District"
+                name="district"
+                type="select"
+                control={control}
+                errors={errors}
+                required={true}
+                options={KERALA_DISTRICTS}
+                placeholder="Select your district"
+              />
+            )}
           </FormSection>
         )}
 
@@ -703,26 +833,18 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
               type="select"
               control={control}
               errors={errors}
-              options={[
-                { value: "Student", label: "Student" },
-                { value: "Government Service", label: "Government Service" },
-                { value: "Private Sector", label: "Private Sector" },
-                { value: "Business", label: "Business" },
-                { value: "Self Employed", label: "Self Employed" },
-                { value: "Homemaker", label: "Homemaker" },
-                { value: "Retired", label: "Retired" },
-                { value: "Other", label: "Other" },
-              ]}
+              options={PROFESSION_OPTIONS}
+              placeholder="Select your profession"
             />
 
-            {profession === "Business" && (
+            {profession && profession !== "Student" && (
               <FormField
-                label="Business Details"
-                name="businessDetails"
+                label="Professional Details"
+                name="professionalDetails"
                 type="textarea"
                 control={control}
                 errors={errors}
-                placeholder="Please provide brief details about your business"
+                placeholder="Please provide details about your profession, role, and experience"
               />
             )}
 
@@ -792,31 +914,56 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
                     <div className="space-y-4 mt-8">
                       <h3 className="text-lg font-medium text-gray-900">
-                        Additional Participation
+                        Event Participation
                       </h3>
 
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                        <p className="text-yellow-800 text-sm">
+                          Note: Your participation request will be reviewed by
+                          the organizing team. While we try to accommodate
+                          everyone, we cannot guarantee 100% acceptance due to
+                          various constraints.
+                        </p>
+                      </div>
+
                       <FormField
-                        label="How would you like to contribute to the event?"
-                        name="eventContribution"
+                        label="What would you like to do for the event?"
+                        name="eventParticipation"
                         type="multiselect"
                         control={control}
                         errors={errors}
                         options={[
-                          { value: "Speaker", label: "As a Speaker" },
-                          { value: "Panelist", label: "As a Panelist" },
-                          { value: "Volunteer", label: "As a Volunteer" },
-                          { value: "Sponsor", label: "As a Sponsor" },
-                          { value: "Organizer", label: "As an Organizer" },
+                          { value: "none", label: "None" },
+                          { value: "volunteering", label: "Volunteering" },
+                          { value: "businessStalls", label: "Business Stalls" },
+                          {
+                            value: "artCraftBooks",
+                            label: "Display art & craft or books",
+                          },
+                          {
+                            value: "culturalTrainer",
+                            label: "Cultural Program (as Trainer)",
+                          },
+                          {
+                            value: "culturalParticipant",
+                            label: "Cultural Program (as Participant)",
+                          },
+                          { value: "bookRelease", label: "Book Release" },
+                          { value: "cinemaRelease", label: "Cinema Release" },
+                          { value: "displayCinema", label: "Display Cinema" },
+                          { value: "compliments", label: "Compliments" },
+                          { value: "other", label: "Other" },
                         ]}
                       />
 
                       <FormField
-                        label="Additional Details (if any)"
-                        name="contributionDetails"
+                        label="Please explain your participation in detail"
+                        name="participationDetails"
                         type="textarea"
                         control={control}
                         errors={errors}
-                        placeholder="Any specific details about your contribution"
+                        placeholder="Provide detailed information about your proposed participation, including any specific requirements, duration, space needed, etc."
+                        rows={4}
                       />
                     </div>
                   </div>
@@ -876,102 +1023,309 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         {/* Transportation Step */}
         {currentStep === 5 && isAttending && (
           <FormSection title="Transportation Details">
-            <FormField
-              label="Travelling From"
-              name="travellingFrom"
-              type="text"
-              control={control}
-              errors={errors}
-              required={true}
-              placeholder="City/Town you'll be travelling from"
-            />
+            <div className="space-y-6">
+              <div className="bg-blue-50 p-4 rounded-lg mb-6">
+                <p className="text-blue-800 text-sm">
+                  This information will help us organize group transportation
+                  from your area. We'll coordinate special bookings based on the
+                  number of alumni from each area.
+                </p>
+              </div>
 
-            <FormField
-              label="Expected Travel Date/Time"
-              name="travelDateTime"
-              type="datetime-local"
-              control={control}
-              errors={errors}
-              required={true}
-            />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  label="Starting Location Pincode"
+                  name="startPincode"
+                  type="text"
+                  control={control}
+                  errors={errors}
+                  required={true}
+                  placeholder="Enter your starting location pincode"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  onChange={async (e) => {
+                    const pincodeValue = e.target.value;
+                    if (pincodeValue.length === 6) {
+                      try {
+                        // Show loading state
+                        toast.info("Fetching location details...", {
+                          autoClose: false,
+                          closeButton: false,
+                          isLoading: true,
+                        });
 
-            <FormField
-              label="Mode of Travel"
-              name="modeOfTravel"
-              type="select"
-              control={control}
-              errors={errors}
-              required={true}
-              options={[
-                { value: "Car", label: "Car" },
-                { value: "Train", label: "Train" },
-                { value: "Flight", label: "Flight" },
-                { value: "Other", label: "Other" },
-              ]}
-            />
+                        const data = await getPincodeDetails(pincodeValue);
 
-            <FormField
-              label="Need Parking at the Venue?"
-              name="needParking"
-              type="checkbox"
-              control={control}
-              errors={errors}
-            />
+                        if (
+                          data &&
+                          data[0] &&
+                          data[0].Status === "Success" &&
+                          data[0].PostOffice &&
+                          data[0].PostOffice.length > 0
+                        ) {
+                          const postOffice = data[0].PostOffice[0];
 
-            <FormField
-              label="Car Pooling"
-              name="carPooling"
-              type="select"
-              control={control}
-              errors={errors}
-              required={true}
-              options={[
-                { value: "No", label: "No" },
-                {
-                  value: "Yes To Venue",
-                  label: "Yes - I can offer rides to the venue",
-                },
-                {
-                  value: "Yes From Venue",
-                  label: "Yes - I can offer rides from the venue",
-                },
-                {
-                  value: "Yes Both Ways",
-                  label: "Yes - I can offer rides both ways",
-                },
-              ]}
-            />
+                          setValue("district", postOffice.District);
+                          setValue("state", postOffice.State);
+                          setValue(
+                            "taluk",
+                            postOffice.Block || postOffice.District
+                          );
 
-            {carPooling !== "No" && (
+                          // Show success message with location details
+                          toast.dismiss();
+                          toast.success(
+                            `Location found: ${postOffice.District}, ${postOffice.State}`
+                          );
+                        } else {
+                          // Clear the values if pincode is invalid
+                          setValue("district", "");
+                          setValue("state", "");
+                          setValue("taluk", "");
+                          toast.dismiss();
+                          toast.error("Invalid pincode or location not found");
+                        }
+                      } catch (error) {
+                        // Clear the values if there's an error
+                        setValue("district", "");
+                        setValue("state", "");
+                        setValue("taluk", "");
+                        toast.dismiss();
+                        toast.error(
+                          "Error fetching location details. Please try again."
+                        );
+                      }
+                    } else {
+                      // Clear the values if pincode is not 6 digits
+                      setValue("district", "");
+                      setValue("state", "");
+                      setValue("taluk", "");
+                      // Don't show any message for incomplete pincode
+                    }
+                  }}
+                />
+
+                <FormField
+                  label="Nearest Landmark"
+                  name="nearestLandmark"
+                  type="text"
+                  control={control}
+                  errors={errors}
+                  placeholder="e.g., Railway Station, Bus Stand, etc."
+                />
+              </div>
+
+              {/* Display location details if pincode is valid */}
+              {watch("startPincode")?.length === 6 && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                    Location Details
+                  </h4>
+                  {watch("district") && watch("state") ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500">District</p>
+                        <p className="text-sm font-medium">
+                          {watch("district")}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Taluk/Block</p>
+                        <p className="text-sm font-medium">{watch("taluk")}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">State</p>
+                        <p className="text-sm font-medium">{watch("state")}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <p className="text-sm text-red-600">
+                        Invalid pincode or location not found
+                      </p>
+                      <FormField
+                        label="Please enter your origin area details"
+                        name="originArea"
+                        type="text"
+                        control={control}
+                        errors={errors}
+                        required={true}
+                        placeholder="Enter your city/town name"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <FormField
+                    label="Expected Travel Date"
+                    name="travelDate"
+                    type="date"
+                    control={control}
+                    errors={errors}
+                    required={true}
+                    min={new Date().toISOString().split("T")[0]}
+                    className="date-picker"
+                  />
+                </div>
+                <div>
+                  <FormField
+                    label="Expected Travel Time"
+                    name="travelTime"
+                    type="time"
+                    control={control}
+                    errors={errors}
+                    required={true}
+                    className="time-picker"
+                  />
+                </div>
+              </div>
+
               <FormField
-                label="Number of Co-Passenger Seats Available"
-                name="coShareSeats"
-                type="number"
+                label="Mode of Transport"
+                name="modeOfTransport"
+                type="select"
                 control={control}
                 errors={errors}
                 required={true}
-                min={1}
-                valueAsNumber={true}
+                options={[
+                  { value: "car", label: "Car" },
+                  { value: "train", label: "Train" },
+                  { value: "flight", label: "Flight" },
+                  { value: "bus", label: "Bus" },
+                  { value: "other", label: "Other" },
+                ]}
               />
-            )}
 
-            <FormField
-              label="Landmarks Near Your Location (for pickup coordination)"
-              name="landmarks"
-              type="text"
-              control={control}
-              errors={errors}
-              placeholder="Any prominent landmarks near your location"
-            />
+              {watch("modeOfTransport") === "car" && (
+                <div className="space-y-4">
+                  <FormField
+                    label="Will you be ready for ride sharing from your starting point?"
+                    name="readyForRideShare"
+                    type="select"
+                    control={control}
+                    errors={errors}
+                    required={true}
+                    options={[
+                      { value: "yes", label: "Yes" },
+                      { value: "no", label: "No" },
+                    ]}
+                  />
 
-            <FormField
-              label="Additional Travel Remarks"
-              name="travelRemarks"
-              type="textarea"
-              control={control}
-              errors={errors}
-              placeholder="Any specific travel requirements or information"
-            />
+                  {watch("readyForRideShare") === "yes" && (
+                    <FormField
+                      label="How many people can you accommodate in your car?"
+                      name="rideShareCapacity"
+                      type="number"
+                      control={control}
+                      errors={errors}
+                      required={true}
+                      min={1}
+                      max={6}
+                    />
+                  )}
+
+                  <FormField
+                    label="Will you need car parking at the venue?"
+                    name="needParking"
+                    type="select"
+                    control={control}
+                    errors={errors}
+                    required={true}
+                    options={[
+                      { value: "yes", label: "Yes" },
+                      { value: "no", label: "No" },
+                    ]}
+                  />
+                </div>
+              )}
+
+              {watch("modeOfTransport") !== "car" && (
+                <div className="space-y-4">
+                  <FormField
+                    label="Would you like to share a ride from your starting point?"
+                    name="wantRideShare"
+                    type="select"
+                    control={control}
+                    errors={errors}
+                    required={true}
+                    options={[
+                      { value: "yes", label: "Yes" },
+                      { value: "no", label: "No" },
+                    ]}
+                  />
+
+                  {watch("wantRideShare") === "yes" && (
+                    <FormField
+                      label="Number of people in your group"
+                      name="rideShareGroupSize"
+                      type="number"
+                      control={control}
+                      errors={errors}
+                      required={true}
+                      min={1}
+                      max={6}
+                    />
+                  )}
+                </div>
+              )}
+
+              <FormField
+                label="Special Requirements for Travel"
+                name="travelSpecialRequirements"
+                type="textarea"
+                control={control}
+                errors={errors}
+                placeholder="Any specific requirements for travel (e.g., wheelchair access, medical conditions, etc.)"
+              />
+
+              {/* Show potential group information */}
+              {watch("startPincode") &&
+                watch("district") &&
+                ((watch("modeOfTransport") === "car" &&
+                  watch("readyForRideShare") === "yes") ||
+                  (watch("modeOfTransport") !== "car" &&
+                    watch("wantRideShare") === "yes")) && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">
+                      Group Travel Information
+                    </h3>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <p className="text-gray-600 text-sm">
+                        Based on your location ({watch("district")},{" "}
+                        {watch("state")}), we'll:
+                      </p>
+                      <ul className="list-disc list-inside text-gray-600 text-sm mt-2 space-y-1">
+                        <li>
+                          Group you with other alumni from {watch("district")}{" "}
+                          district
+                        </li>
+                        <li>Coordinate group transportation arrangements</li>
+                        <li>Share travel details once the group is formed</li>
+                        <li>
+                          Provide pickup points based on the group's location
+                        </li>
+                        {watch("modeOfTransport") === "car" &&
+                          watch("readyForRideShare") === "yes" && (
+                            <li>
+                              Coordinate ride sharing with other alumni in your
+                              area
+                            </li>
+                          )}
+                        {watch("modeOfTransport") !== "car" &&
+                          watch("wantRideShare") === "yes" && (
+                            <li>
+                              Arrange shared transportation from your starting
+                              point
+                            </li>
+                          )}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+            </div>
           </FormSection>
         )}
 
@@ -1004,6 +1358,14 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
             {accommodation === "provide" && (
               <>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <p className="text-yellow-800 text-sm">
+                    Note: The accommodation must be within 25 km radius of CIAL
+                    Convention Center (our venue) to be considered for group
+                    arrangements.
+                  </p>
+                </div>
+
                 <FormField
                   label="How many people can you accommodate?"
                   name="accommodationCapacity"
@@ -1021,7 +1383,8 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                   type="text"
                   control={control}
                   errors={errors}
-                  placeholder="Area/locality where you can provide accommodation"
+                  required={true}
+                  placeholder="Enter the exact location/address of your accommodation"
                 />
               </>
             )}
@@ -1037,158 +1400,8 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
           </FormSection>
         )}
 
-        {/* Financial Contribution Step */}
-        {currentStep === 7 && (
-          <FormSection title="Financial Contribution">
-            <div className="space-y-6">
-              {hasPreviousContribution && (
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-center">
-                    <svg
-                      className="h-5 w-5 text-green-400 mr-2"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    <p className="text-green-800">
-                      Previous contribution of ₹{previousContributionAmount} was
-                      successful
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              <FormField
-                label={`${
-                  hasPreviousContribution ? "Additional " : ""
-                }Contribution Amount (in ₹)`}
-                name="contributionAmount"
-                type="number"
-                control={control}
-                errors={errors}
-                required={!hasPreviousContribution}
-                min={1}
-                valueAsNumber={true}
-              />
-
-              {watch("contributionAmount") > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex justify-center"
-                >
-                  <button
-                    type="button"
-                    onClick={handlePayment}
-                    disabled={isPaymentProcessing}
-                    className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isPaymentProcessing ? (
-                      <>
-                        <svg
-                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          className="-ml-1 mr-3 h-5 w-5"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
-                          />
-                        </svg>
-                        {hasPreviousContribution
-                          ? "Contribute More"
-                          : "Proceed to Pay"}{" "}
-                        ₹{watch("contributionAmount")}
-                      </>
-                    )}
-                  </button>
-                </motion.div>
-              )}
-            </div>
-
-            {/* Mission Message Popup */}
-            <AlertDialog
-              isOpen={showMissionMessage}
-              onClose={() => setShowMissionMessage(false)}
-              onConfirm={() => setShowMissionMessage(false)}
-              title="Support UNMA's Mission"
-              message={
-                <div className="space-y-4">
-                  <p className="text-lg">
-                    This event is more than just a gathering - it's a fundraiser
-                    for UNMA's future activities and emergency support
-                    initiatives.
-                  </p>
-                  <p>
-                    Your contribution will directly impact our community. We're
-                    currently supporting alumni from Wayanad and Kozhikode who
-                    lost everything in the 2024 landslides.
-                  </p>
-                  <p className="font-medium text-lg">
-                    UNMA alumni stand together 24/7, supporting each other
-                    through thick and thin. Your generosity strengthens this
-                    support system.
-                  </p>
-                </div>
-              }
-              confirmText="I Understand"
-              singleButton={true}
-              type="info"
-            />
-
-            {/* Contribution Warning Dialog */}
-            <AlertDialog
-              isOpen={showAlertDialog}
-              onClose={() => setShowAlertDialog(false)}
-              onConfirm={() => {
-                alertDialogConfig.onConfirm();
-                setShowAlertDialog(false);
-              }}
-              title={alertDialogConfig.title}
-              message={alertDialogConfig.message}
-              confirmText="Proceed with current amount"
-              cancelText="Add more amount"
-              type="warning"
-            />
-          </FormSection>
-        )}
-
         {/* Optional Details Step */}
-        {currentStep === 8 && (
+        {currentStep === 7 && (
           <FormSection title="Optional Information">
             <div className="space-y-6">
               {/* Spouse Navodayan */}
@@ -1200,25 +1413,25 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 errors={errors}
                 options={[
                   { value: "", label: "Select an option" },
-                  { value: "yes", label: "Yes" },
-                  { value: "no", label: "No" },
+                  { value: "Yes", label: "Yes" },
+                  { value: "No", label: "No" },
                 ]}
               />
 
               {/* UNMA Family Groups */}
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="unmaFamilyGroups"
-                  checked={watch("unmaFamilyGroups")}
-                  onChange={(checked) => setValue("unmaFamilyGroups", checked)}
-                />
-                <label
-                  htmlFor="unmaFamilyGroups"
-                  className="text-sm font-medium text-gray-700"
-                >
-                  I am part of UNMA family groups
-                </label>
-              </div>
+              <FormField
+                label="Are you part of UNMA family groups?"
+                name="unmaFamilyGroups"
+                type="select"
+                control={control}
+                errors={errors}
+                required={true}
+                options={[
+                  { value: "", label: "Select an option" },
+                  { value: "Yes", label: "Yes" },
+                  { value: "No", label: "No" },
+                ]}
+              />
 
               {/* Mentorship Options */}
               <div className="space-y-2">
@@ -1333,22 +1546,22 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
               {/* T-Shirt Interest */}
               <div className="space-y-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="tshirtInterest"
-                    checked={watch("tshirtInterest")}
-                    onChange={(checked) => setValue("tshirtInterest", checked)}
-                  />
-                  <label
-                    htmlFor="tshirtInterest"
-                    className="text-sm font-medium text-gray-700"
-                  >
-                    I am interested in buying UNMA Custom T-Shirt
-                  </label>
-                </div>
+                <FormField
+                  label="Are you interested in buying UNMA Custom T-Shirt?"
+                  name="tshirtInterest"
+                  type="select"
+                  control={control}
+                  errors={errors}
+                  required={true}
+                  options={[
+                    { value: "", label: "Select an option" },
+                    { value: "yes", label: "Yes" },
+                    { value: "no", label: "No" },
+                  ]}
+                />
 
                 {/* T-Shirt Sizes */}
-                {watch("tshirtInterest") && (
+                {watch("tshirtInterest") === "yes" && (
                   <div className="mt-4 space-y-4">
                     <h4 className="text-sm font-medium text-gray-700">
                       Select sizes and quantities:
@@ -1381,24 +1594,223 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
           </FormSection>
         )}
 
+        {/* Financial Contribution Step */}
+        {currentStep === 8 && (
+          <FormSection title="Financial Contribution">
+            <div className="space-y-6">
+              {hasPreviousContribution && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center">
+                    <svg
+                      className="h-5 w-5 text-green-400 mr-2"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <p className="text-green-800">
+                      Previous contribution of ₹{previousContributionAmount} was
+                      successful
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <FormField
+                label={`${
+                  hasPreviousContribution ? "Additional " : ""
+                }Contribution Amount (in ₹)`}
+                name="contributionAmount"
+                type="number"
+                control={control}
+                errors={errors}
+                required={!hasPreviousContribution}
+                min={1}
+                valueAsNumber={true}
+              />
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center gap-4"
+              >
+                {watch("contributionAmount") > 0 && (
+                  <button
+                    type="button"
+                    onClick={handlePayment}
+                    disabled={isPaymentProcessing}
+                    className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isPaymentProcessing ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          className="-ml-1 mr-3 h-5 w-5"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                          />
+                        </svg>
+                        {hasPreviousContribution
+                          ? "Contribute More"
+                          : "Proceed to Pay"}{" "}
+                        ₹{watch("contributionAmount")}
+                      </>
+                    )}
+                  </button>
+                )}
+              </motion.div>
+
+              {/* Submit Registration Button */}
+              <div className="mt-8 flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleSubmitForm}
+                  disabled={isSubmitting || !hasPreviousContribution}
+                  className="inline-flex items-center px-8 py-4 border border-transparent text-lg font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg
+                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Submitting Registration...
+                    </>
+                  ) : (
+                    <>🎉 Submit Registration 🎊</>
+                  )}
+                </button>
+              </div>
+
+              {!hasPreviousContribution && (
+                <div className="mt-4 text-center text-sm text-red-600">
+                  Please complete your contribution payment before submitting
+                  registration
+                </div>
+              )}
+            </div>
+
+            {/* Mission Message Popup */}
+            <AlertDialog
+              isOpen={showMissionMessage}
+              onClose={() => setShowMissionMessage(false)}
+              onConfirm={() => setShowMissionMessage(false)}
+              title="Support UNMA's Mission"
+              message={
+                <div className="space-y-4">
+                  <p className="text-lg">
+                    This event is more than just a gathering - it's a fundraiser
+                    for UNMA's future activities and emergency support
+                    initiatives.
+                  </p>
+                  <p>
+                    Your contribution will directly impact our community. We're
+                    currently supporting alumni from Wayanad and Kozhikode who
+                    lost everything in the 2024 landslides.
+                  </p>
+                  <p className="font-medium text-lg">
+                    UNMA alumni stand together 24/7, supporting each other
+                    through thick and thin. Your generosity strengthens this
+                    support system.
+                  </p>
+                </div>
+              }
+              confirmText="I Understand"
+              singleButton={true}
+              type="info"
+            />
+
+            {/* Contribution Warning Dialog */}
+            <AlertDialog
+              isOpen={showAlertDialog}
+              onClose={() => setShowAlertDialog(false)}
+              onConfirm={() => {
+                alertDialogConfig.onConfirm();
+                setShowAlertDialog(false);
+              }}
+              title={alertDialogConfig.title}
+              message={alertDialogConfig.message}
+              confirmText="Proceed with current amount"
+              cancelText="Add more amount"
+              type="warning"
+            />
+          </FormSection>
+        )}
+
         <MobileProgressIndicator
           currentStep={currentStep}
           stepsCount={steps.length}
         />
 
-        <NavigationButtons
-          currentStep={currentStep}
-          stepsCount={steps.length}
-          onBack={handleBackStep}
-          onNext={
-            currentStep === steps.length - 1 ? handleSubmitForm : handleNextStep
-          }
-          isSubmitting={isSubmitting}
-          isNextDisabled={
-            currentStep === 0 &&
-            (!emailVerified || !captchaVerified || !quizCompleted)
-          }
-        />
+        {/* Hide navigation buttons on final step */}
+        {currentStep < 8 && (
+          <NavigationButtons
+            currentStep={currentStep}
+            stepsCount={steps.length}
+            onBack={handleBackStep}
+            onNext={handleNextStep}
+            onSkip={handleSkipOptional}
+            isSubmitting={isSubmitting}
+            isNextDisabled={
+              currentStep === 0 &&
+              (!emailVerified || !captchaVerified || !quizCompleted)
+            }
+            nextButtonText="Next"
+            showSkipButton={currentStep === 7}
+          />
+        )}
 
         <div className="mt-6 text-center">
           <p className="text-xs text-gray-500">

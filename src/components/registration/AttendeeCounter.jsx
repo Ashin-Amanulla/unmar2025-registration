@@ -9,7 +9,7 @@ const AgeGroup = {
 };
 
 const ageGroupLabels = {
-  [AgeGroup.ADULTS]: "18+ years",
+  [AgeGroup.ADULTS]: "18+ years (including you)",
   [AgeGroup.TEENS]: "12-18 years",
   [AgeGroup.CHILDREN]: "5-11 years",
   [AgeGroup.TODDLERS]: "2-5 years",

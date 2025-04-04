@@ -32,6 +32,7 @@ export const FormField = ({
   min,
   max,
   disabled,
+  onChange,
 }) => {
   const {
     field,
@@ -57,6 +58,12 @@ export const FormField = ({
             disabled={disabled}
             min={min}
             max={max}
+            onChange={(e) => {
+              field.onChange(e);
+              if (onChange) {
+                onChange(e);
+              }
+            }}
             className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none ${
               error ? "border-red-500" : "border-gray-300"
             } ${disabled ? "bg-gray-100" : ""}`}
@@ -136,6 +143,38 @@ export const FormField = ({
           />
         );
 
+      case "date":
+        return (
+          <input
+            type="date"
+            id={name}
+            {...field}
+            disabled={disabled}
+            min={min}
+            max={max}
+            className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+              error ? "border-red-500" : "border-gray-300"
+            } ${disabled ? "bg-gray-100" : ""} date-picker`}
+            placeholder={placeholder || ""}
+          />
+        );
+
+      case "time":
+        return (
+          <input
+            type="time"
+            id={name}
+            {...field}
+            disabled={disabled}
+            min={min}
+            max={max}
+            className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none ${
+              error ? "border-red-500" : "border-gray-300"
+            } ${disabled ? "bg-gray-100" : ""} time-picker`}
+            placeholder={placeholder || ""}
+          />
+        );
+
       default:
         return (
           <input
@@ -175,7 +214,7 @@ export const FormField = ({
 };
 
 // OTP Input component
-export const OtpInput = ({ onVerify, email }) => {
+export const OtpInput = ({ onVerify, email, phone }) => {
   const [otp, setOtp] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
@@ -195,7 +234,7 @@ export const OtpInput = ({ onVerify, email }) => {
 
   // Handle sending OTP
   const handleSendOtp = async () => {
-    if (!email) return;
+    if (!email && !phone) return;
 
     setIsSendingOtp(true);
 
@@ -349,37 +388,89 @@ export const NavigationButtons = ({
   stepsCount,
   onBack,
   onNext,
+  onSkip,
   isSubmitting,
   isNextDisabled,
+  nextButtonText = "Next",
+  showSkipButton = false,
 }) => {
-  const isLastStep = currentStep === stepsCount - 1;
-
   return (
-    <div className="flex justify-between mt-8">
-      {currentStep > 0 ? (
-        <button
-          type="button"
-          onClick={onBack}
-          className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-        >
-          Back
-        </button>
-      ) : (
-        <div></div>
-      )}
-
+    <div className="mt-8 flex justify-between items-center">
       <button
         type="button"
-        onClick={onNext}
-        disabled={isNextDisabled || isSubmitting}
-        className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+        onClick={onBack}
+        disabled={currentStep === 0}
+        className={`px-4 py-2 text-sm font-medium rounded-md ${
+          currentStep === 0
+            ? "text-gray-400 cursor-not-allowed"
+            : "text-blue-600 hover:text-blue-700"
+        }`}
       >
-        {isSubmitting
-          ? "Submitting..."
-          : isLastStep
-          ? "Submit Registration"
-          : "Next Step"}
+        Back
       </button>
+      <div className="flex gap-3">
+        {showSkipButton && (
+          <button
+            type="button"
+            onClick={onSkip}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Skip Optional
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={isSubmitting || isNextDisabled}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSubmitting ? (
+            <>
+              <svg
+                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Submitting...
+            </>
+          ) : (
+            <>
+              {nextButtonText}
+              {nextButtonText === "Next" && (
+                <svg
+                  className="ml-2 -mr-1 h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              )}
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 };

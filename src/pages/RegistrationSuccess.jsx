@@ -1,86 +1,193 @@
-import { useEffect } from "react";
-import { useLocation, useNavigate, Link } from "react-router-dom";
-import { toast } from "react-toastify";
+import React, { useEffect } from "react";
+import { useLocation, Link } from "react-router-dom";
+import confetti from "canvas-confetti";
 
 const RegistrationSuccess = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const registrationId = location.state?.registrationId;
+  const { registrationData } = location.state || {};
 
   useEffect(() => {
-    // If no registration ID is provided, redirect to registration page
-    if (!registrationId) {
-      toast.error("Invalid registration session. Please register again.");
-      navigate("/registration");
-    }
-  }, [registrationId, navigate]);
+    // Trigger confetti animation
+    const duration = 3 * 1000;
+    const animationEnd = Date.now() + duration;
 
-  // Safely return if no registration ID
-  if (!registrationId) {
-    return null;
-  }
+    const randomInRange = (min, max) => {
+      return Math.random() * (max - min) + min;
+    };
+
+    const interval = setInterval(() => {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        return clearInterval(interval);
+      }
+
+      const particleCount = 50;
+
+      confetti({
+        particleCount,
+        startVelocity: 30,
+        spread: 360,
+        origin: {
+          x: randomInRange(0.1, 0.9),
+          y: Math.random() - 0.2,
+        },
+      });
+    }, 250);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-12">
-      <div className="bg-white shadow-md rounded-lg p-8 text-center">
-        <div className="flex justify-center mb-6">
-          <div className="h-24 w-24 rounded-full bg-green-100 flex items-center justify-center">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-16 w-16 text-green-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          {/* Header Section */}
+          <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-8 py-12 text-center">
+            <div className="text-5xl mb-4 flex justify-center gap-4">
+              <span>🎉</span>
+              <span>🌟</span>
+              <span>🎊</span>
+            </div>
+            <h1 className="text-3xl font-bold text-white mb-2">
+              Thank You, {registrationData?.name || "Navodayan"}!
+            </h1>
+            <p className="text-blue-100 text-lg">
+              Your registration is complete and we can't wait to meet you!
+            </p>
           </div>
-        </div>
 
-        <h1 className="text-3xl font-bold text-center mb-4 text-gray-800">
-          Registration Successful!
-        </h1>
+          {/* Main Content */}
+          <div className="px-8 py-10 space-y-8">
+            {/* Venue Details */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
+                <span>📍</span> Venue Details
+              </h2>
+              <div className="bg-blue-50 rounded-lg p-6 space-y-3">
+                <p className="text-lg font-medium text-blue-900">
+                  CIAL Convention Center
+                </p>
+                <p className="text-gray-600">
+                  Cochin International Airport Limited
+                  <br />
+                  Airport Road, Nedumbassery
+                  <br />
+                  Kochi, Kerala - 683111
+                </p>
+                <a
+                  href="https://maps.google.com/?q=CIAL+Convention+Center"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-blue-600 hover:text-blue-800"
+                >
+                  <span>🗺️</span>
+                  <span className="ml-1 underline">View on Google Maps</span>
+                </a>
+              </div>
+            </div>
 
-        <p className="text-lg text-gray-600 mb-6">
-          Thank you for registering for UNMA 2025. Your registration ID is:
-        </p>
+            {/* What to Expect */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
+                <span>🌈</span> What to Expect
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-green-50 rounded-lg p-4">
+                  <p className="font-medium text-green-800 mb-2">
+                    🤝 Networking Opportunities
+                  </p>
+                  <p className="text-green-600">
+                    Connect with fellow Navodayans from various batches and fields
+                  </p>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <p className="font-medium text-purple-800 mb-2">
+                    🎭 Cultural Programs
+                  </p>
+                  <p className="text-purple-600">
+                    Enjoy amazing performances and participate in activities
+                  </p>
+                </div>
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <p className="font-medium text-yellow-800 mb-2">
+                    🍽️ Delicious Food
+                  </p>
+                  <p className="text-yellow-600">
+                    Savor a variety of cuisines prepared just for you
+                  </p>
+                </div>
+                <div className="bg-red-50 rounded-lg p-4">
+                  <p className="font-medium text-red-800 mb-2">
+                    💝 Memorable Moments
+                  </p>
+                  <p className="text-red-600">
+                    Create lasting memories with your JNV family
+                  </p>
+                </div>
+              </div>
+            </div>
 
-        <div className="bg-gray-100 rounded-md py-3 px-6 mb-8 inline-block">
-          <code className="text-xl font-mono font-semibold text-blue-800">
-            {registrationId}
-          </code>
-        </div>
+            {/* Next Steps */}
+            <div className="space-y-4">
+              <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2">
+                <span>📝</span> Next Steps
+              </h2>
+              <ul className="list-none space-y-3">
+                <li className="flex items-start gap-3">
+                  <span className="text-green-500">✓</span>
+                  <span>Check your email for the confirmation details</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-green-500">✓</span>
+                  <span>Join our WhatsApp group for updates (link in email)</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <span className="text-green-500">✓</span>
+                  <span>Follow our social media for event updates</span>
+                </li>
+              </ul>
+            </div>
 
-        <div className="mb-8 max-w-2xl mx-auto">
-          <p className="text-gray-600 mb-4">
-            We've sent a confirmation email with your registration details.
-            Please save your registration ID for future reference.
-          </p>
-          <p className="text-gray-600">
-            If you need to make any changes to your registration, please contact
-            the UNMA 2025 organizing committee with your registration ID.
-          </p>
-        </div>
+            {/* Need Help Section */}
+            <div className="bg-gray-50 rounded-lg p-6 mt-8">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-2">
+                <span>🤔</span> Need Help?
+              </h3>
+              <div className="space-y-4">
+                <p className="text-gray-600">
+                  Have questions or facing issues? We're here to help!
+                </p>
+                <div className="flex flex-wrap gap-4">
+                  <Link
+                    to="/report-issue"
+                    className="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md text-blue-600 hover:bg-blue-50"
+                  >
+                    🐛 Report an Issue
+                  </Link>
+                  <a
+                    href="mailto:support@unma.in"
+                    className="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md text-blue-600 hover:bg-blue-50"
+                  >
+                    ✉️ Email Support
+                  </a>
+                  <a
+                    href="tel:+919876543210"
+                    className="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md text-blue-600 hover:bg-blue-50"
+                  >
+                    📞 Call Helpline
+                  </a>
+                </div>
+              </div>
+            </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-          >
-            Return to Home
-          </Link>
-
-          <Link
-            to="/event-details"
-            className="inline-flex items-center justify-center px-6 py-3 border border-blue-600 text-base font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50"
-          >
-            View Event Details
-          </Link>
+            {/* Fun Quote */}
+            <div className="text-center mt-8 pt-8 border-t border-gray-200">
+              <p className="text-lg text-gray-600 italic">
+                "The JNV spirit never graduates - it just keeps getting stronger! 💪"
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

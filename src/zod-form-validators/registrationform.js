@@ -107,7 +107,7 @@ const AlumniSchema = BaseRegistrationSchema.extend({
 
     // Optional Fields
     spouseNavodayan: z.enum(["", "Yes", "No"]).optional(),
-    unmaFamilyGroups: z.boolean().optional(),
+    unmaFamilyGroups: z.enum(["", "Yes", "No"]).optional(),
     mentorshipOptions: z.array(z.string()).optional(),
     trainingOptions: z.array(z.string()).optional(),
     seminarOptions: z.array(z.string()).optional(),
