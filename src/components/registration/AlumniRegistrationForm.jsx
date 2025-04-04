@@ -9,7 +9,6 @@ import VerificationQuiz from "../VerificationQuiz";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
 import "../../styles/phone-input.css";
-import Select from "react-select";
 import countries from "i18n-iso-countries";
 import enLocale from "i18n-iso-countries/langs/en.json";
 import {
@@ -22,6 +21,12 @@ import {
 } from "./FormComponents";
 import StepIndicator from "./StepIndicator";
 import { jnvSchools, indianStatesOptions } from "../../assets/data";
+import SponsorshipCards from "./SponsorshipCards";
+import AttendeeCounter from "./AttendeeCounter";
+import { motion } from "framer-motion";
+import AlertDialog from "../ui/AlertDialog";
+import { Checkbox } from "../ui/Checkbox";
+import { usePayment } from "../../hooks/usePayment";
 // Initialize countries data
 countries.registerLocale(enLocale);
 
@@ -33,6 +38,47 @@ const countryOptions = Object.entries(countries.getNames("en"))
   }))
   .sort((a, b) => a.label.localeCompare(b.label));
 
+// Add new constants for options
+const MENTORSHIP_OPTIONS = [
+  { value: "students", label: "Students" },
+  { value: "young_alumni", label: "Young Alumni" },
+  { value: "career_guidance", label: "Career Guidance" },
+  { value: "startup_mentoring", label: "Startup Mentoring" },
+];
+
+const TRAINING_OPTIONS = [
+  { value: "technical", label: "Technical Skills" },
+  { value: "soft_skills", label: "Soft Skills" },
+  { value: "leadership", label: "Leadership" },
+  { value: "entrepreneurship", label: "Entrepreneurship" },
+];
+
+const SEMINAR_OPTIONS = [
+  { value: "technical", label: "Technical Topics" },
+  { value: "career", label: "Career Development" },
+  { value: "industry", label: "Industry Trends" },
+  { value: "personal", label: "Personal Growth" },
+];
+
+const TSHIRT_SIZES = [
+  { value: "S", label: "Small" },
+  { value: "M", label: "Medium" },
+  { value: "L", label: "Large" },
+  { value: "XL", label: "Extra Large" },
+  { value: "XXL", label: "2X Large" },
+  { value: "XXXL", label: "3X Large" },
+];
+
+// Add this constant at the top with other constants
+const DEFAULT_TSHIRT_SIZES = {
+  S: 0,
+  M: 0,
+  L: 0,
+  XL: 0,
+  XXL: 0,
+  XXXL: 0,
+};
+
 const AlumniRegistrationForm = ({ onBack, storageKey }) => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
@@ -41,8 +87,19 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [formHasLocalData, setFormHasLocalData] = useState(false);
+  const [showAlertDialog, setShowAlertDialog] = useState(false);
+  const [showMissionMessage, setShowMissionMessage] = useState(false);
+  const [alertDialogConfig, setAlertDialogConfig] = useState({
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
+  const [hasPreviousContribution, setHasPreviousContribution] = useState(false);
+  const [previousContributionAmount, setPreviousContributionAmount] =
+    useState(0);
 
   const { submitRegistration, calculateContribution } = useRegistration();
+  const { isPaymentProcessing, initiatePayment } = usePayment();
 
   // Steps in the registration form
   const steps = [
@@ -50,6 +107,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
     "Personal Info",
     "Professional",
     "Event Attendance",
+    "Sponsorship",
     "Transportation",
     "Accommodation",
     "Financial",
@@ -90,10 +148,13 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       keySkills: "",
 
       // Event attendance
-      isAttending: true,
-      foodPreference: undefined,
-      totalVeg: 0,
-      totalNonVeg: 0,
+      isAttending: false,
+      attendees: {
+        adults: { veg: 0, nonVeg: 0 },
+        teens: { veg: 0, nonVeg: 0 },
+        children: { veg: 0, nonVeg: 0 },
+        toddlers: { veg: 0, nonVeg: 0 },
+      },
       eventContribution: [],
       contributionDetails: "",
 
@@ -124,7 +185,8 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       mentorshipOptions: [],
       trainingOptions: [],
       seminarOptions: [],
-      bloodGroup: "",
+      tshirtInterest: false,
+      tshirtSizes: DEFAULT_TSHIRT_SIZES,
     },
   });
 
@@ -245,9 +307,22 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       fieldsToValidate = ["isAttending"];
 
       if (isAttending) {
-        fieldsToValidate.push("foodPreference", "totalVeg", "totalNonVeg");
+        const attendees = watch("attendees");
+        const totalAttendees = Object.values(attendees).reduce(
+          (sum, group) => sum + (group.veg || 0) + (group.nonVeg || 0),
+          0
+        );
+
+        if (totalAttendees === 0) {
+          toast.error("Please add at least one attendee");
+          return false;
+        }
       }
+      return true;
     } else if (currentStep === 4) {
+      // Sponsorship
+      fieldsToValidate = ["interestedInSponsorship"];
+    } else if (currentStep === 5) {
       // Transportation
       if (isAttending) {
         fieldsToValidate = [
@@ -264,7 +339,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       } else {
         return true;
       }
-    } else if (currentStep === 5) {
+    } else if (currentStep === 6) {
       // Accommodation
       if (isAttending) {
         fieldsToValidate = ["accommodation"];
@@ -275,14 +350,18 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       } else {
         return true;
       }
-    } else if (currentStep === 6) {
-      // Financial contribution
-      fieldsToValidate = ["willContribute"];
-
-      if (willContribute) {
-        fieldsToValidate.push("contributionAmount");
-      }
     } else if (currentStep === 7) {
+      // Financial contribution
+      const contributionAmount = watch("contributionAmount");
+      if (
+        !hasPreviousContribution &&
+        (!contributionAmount || contributionAmount <= 0)
+      ) {
+        toast.error("Please enter a contribution amount");
+        return false;
+      }
+      return true;
+    } else if (currentStep === 8) {
       // Optional fields
       return true;
     }
@@ -342,6 +421,75 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
   const handleSubmitForm = () => {
     handleSubmit(onSubmit)();
   };
+
+  const handlePayment = async () => {
+    try {
+      const contributionAmount = watch("contributionAmount") || 0;
+
+      // Skip expense comparison for additional contributions
+      if (!hasPreviousContribution) {
+        const attendees = watch("attendees");
+        const adultCount =
+          (attendees?.adults?.veg || 0) + (attendees?.adults?.nonVeg || 0);
+        const teenCount =
+          (attendees?.teens?.veg || 0) + (attendees?.teens?.nonVeg || 0);
+        const childCount =
+          (attendees?.children?.veg || 0) + (attendees?.children?.nonVeg || 0);
+
+        const totalExpense =
+          adultCount * 500 + teenCount * 250 + childCount * 150;
+
+        if (
+          isAttending &&
+          contributionAmount > 0 &&
+          contributionAmount < totalExpense
+        ) {
+          setAlertDialogConfig({
+            title: "Contribution Amount Warning",
+            message: `Your contribution (₹${contributionAmount}) is less than the estimated expenses (₹${totalExpense}) for your group. Would you like to continue with the current amount?`,
+            onConfirm: () => proceedWithPayment(contributionAmount),
+          });
+          setShowAlertDialog(true);
+          return;
+        }
+      }
+
+      await proceedWithPayment(contributionAmount);
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast.error("Payment failed. Please try again.");
+    }
+  };
+
+  const proceedWithPayment = async (contributionAmount) => {
+    await initiatePayment({
+      amount: contributionAmount,
+      name: watch("name"),
+      email: watch("email"),
+      contact: watch("contactNumber"),
+      notes: {
+        registrationType: "Alumni",
+        isAttending: isAttending ? "Yes" : "No",
+      },
+      onSuccess: (response) => {
+        setValue("paymentStatus", "completed");
+        setValue("paymentId", response.razorpay_payment_id);
+        setHasPreviousContribution(true);
+        setPreviousContributionAmount(contributionAmount);
+        handleNextStep();
+      },
+      onFailure: (error) => {
+        console.error("Payment failed:", error);
+      },
+    });
+  };
+
+  // Add useEffect to show mission message when entering financial step
+  useEffect(() => {
+    if (currentStep === 7) {
+      setShowMissionMessage(true);
+    }
+  }, [currentStep]);
 
   return (
     <>
@@ -476,6 +624,25 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
             </div>
 
             <FormField
+              label="Blood Group (for emergencies)"
+              name="bloodGroup"
+              type="select"
+              control={control}
+              errors={errors}
+              options={[
+                { value: "", label: "Select blood group" },
+                { value: "A+", label: "A+" },
+                { value: "A-", label: "A-" },
+                { value: "B+", label: "B+" },
+                { value: "B-", label: "B-" },
+                { value: "AB+", label: "AB+" },
+                { value: "AB-", label: "AB-" },
+                { value: "O+", label: "O+" },
+                { value: "O-", label: "O-" },
+              ]}
+            />
+
+            <FormField
               label="JNV School"
               name="school"
               type="select"
@@ -582,89 +749,132 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         {/* Event Attendance Step */}
         {currentStep === 3 && (
           <FormSection title="Event Attendance">
-            <FormField
-              label="Will you attend the event?"
-              name="isAttending"
-              type="checkbox"
-              control={control}
-              errors={errors}
-            />
+            <div className="space-y-6">
+              <FormField
+                label="Will you attend the event?"
+                name="isAttending"
+                type="checkbox"
+                control={control}
+                errors={errors}
+              />
 
-            {isAttending && (
+              {isAttending && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="space-y-6">
+                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                      <p className="text-sm text-gray-600">
+                        Please indicate the number of attendees in each age
+                        group and their food preferences. This will help us plan
+                        the seating and catering arrangements accordingly.
+                      </p>
+                    </div>
+
+                    <AttendeeCounter
+                      values={
+                        watch("attendees") || {
+                          adults: { veg: 0, nonVeg: 0 },
+                          teens: { veg: 0, nonVeg: 0 },
+                          children: { veg: 0, nonVeg: 0 },
+                          toddlers: { veg: 0, nonVeg: 0 },
+                        }
+                      }
+                      onChange={(newValues) => {
+                        setValue("attendees", newValues, {
+                          shouldValidate: true,
+                        });
+                      }}
+                    />
+
+                    <div className="space-y-4 mt-8">
+                      <h3 className="text-lg font-medium text-gray-900">
+                        Additional Participation
+                      </h3>
+
+                      <FormField
+                        label="How would you like to contribute to the event?"
+                        name="eventContribution"
+                        type="multiselect"
+                        control={control}
+                        errors={errors}
+                        options={[
+                          { value: "Speaker", label: "As a Speaker" },
+                          { value: "Panelist", label: "As a Panelist" },
+                          { value: "Volunteer", label: "As a Volunteer" },
+                          { value: "Sponsor", label: "As a Sponsor" },
+                          { value: "Organizer", label: "As an Organizer" },
+                        ]}
+                      />
+
+                      <FormField
+                        label="Additional Details (if any)"
+                        name="contributionDetails"
+                        type="textarea"
+                        control={control}
+                        errors={errors}
+                        placeholder="Any specific details about your contribution"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </FormSection>
+        )}
+
+        {/* Sponsorship Step */}
+        {currentStep === 4 && (
+          <FormSection title="Sponsorship">
+            <div className="mb-6">
+              <p className="text-gray-600 mb-4">
+                Would you be interested in sponsoring the event? We offer
+                various sponsorship tiers with different benefits and visibility
+                levels.
+              </p>
+              <FormField
+                label="Interested in Sponsorship"
+                name="interestedInSponsorship"
+                type="checkbox"
+                control={control}
+                errors={errors}
+              />
+            </div>
+
+            {watch("interestedInSponsorship") && (
               <>
-                <FormField
-                  label="Food Preference"
-                  name="foodPreference"
-                  type="select"
-                  control={control}
-                  errors={errors}
-                  required={true}
-                  options={[
-                    { value: "vegetarian", label: "Vegetarian" },
-                    { value: "non-vegetarian", label: "Non-Vegetarian" },
-                    { value: "both", label: "Both" },
-                  ]}
-                />
-
-                <p className="text-sm text-gray-500">
-                  If you have any accompanying guests, please add their dietery
-                  preferences to the list below.
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <FormField
-                    label="Number of Vegetarian Meals"
-                    name="totalVeg"
-                    type="number"
-                    control={control}
-                    errors={errors}
-                    required={true}
-                    min={0}
-                    valueAsNumber={true}
-                  />
-
-                  <FormField
-                    label="Number of Non-Vegetarian Meals"
-                    name="totalNonVeg"
-                    type="number"
-                    control={control}
-                    errors={errors}
-                    required={true}
-                    min={0}
-                    valueAsNumber={true}
-                  />
+                <div className="mb-6">
+                  <p className="text-gray-600">
+                    Please select your preferred sponsorship tier. Our team will
+                    contact you directly to discuss the details and process.
+                  </p>
                 </div>
 
-                <FormField
-                  label="How would you like to contribute to the event?"
-                  name="eventContribution"
-                  type="multiselect"
-                  control={control}
-                  errors={errors}
-                  options={[
-                    { value: "Speaker", label: "As a Speaker" },
-                    { value: "Panelist", label: "As a Panelist" },
-                    { value: "Volunteer", label: "As a Volunteer" },
-                    { value: "Sponsor", label: "As a Sponsor" },
-                    { value: "Organizer", label: "As an Organizer" },
-                  ]}
+                <SponsorshipCards
+                  selectedTier={watch("sponsorshipTier")}
+                  onSelectTier={(tier) => setValue("sponsorshipTier", tier)}
                 />
 
-                <FormField
-                  label="Additional Details (if any)"
-                  name="contributionDetails"
-                  type="textarea"
-                  control={control}
-                  errors={errors}
-                  placeholder="Any specific details about your contribution"
-                />
+                <div className="mt-6">
+                  <FormField
+                    label="Additional Sponsorship Details"
+                    name="sponsorshipDetails"
+                    type="textarea"
+                    control={control}
+                    errors={errors}
+                    placeholder="Any specific requirements or questions about sponsorship"
+                  />
+                </div>
               </>
             )}
           </FormSection>
         )}
 
         {/* Transportation Step */}
-        {currentStep === 4 && isAttending && (
+        {currentStep === 5 && isAttending && (
           <FormSection title="Transportation Details">
             <FormField
               label="Travelling From"
@@ -766,7 +976,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         )}
 
         {/* Accommodation Step */}
-        {currentStep === 5 && isAttending && (
+        {currentStep === 6 && isAttending && (
           <FormSection title="Accommodation Arrangements">
             <FormField
               label="Accommodation Preference"
@@ -828,141 +1038,346 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         )}
 
         {/* Financial Contribution Step */}
-        {currentStep === 6 && (
+        {currentStep === 7 && (
           <FormSection title="Financial Contribution">
-            <div className="mb-6 p-4 bg-blue-50 rounded-lg">
-              <p className="text-blue-800">
-                The estimated cost per person for the event is ₹500, which
-                includes food, venue, and event materials.
-              </p>
-              {isAttending && (
-                <p className="text-blue-800 mt-2">
-                  Based on your meal selections, your estimated contribution
-                  would be ₹
-                  {(watch("totalVeg") || 0) * 500 +
-                    (watch("totalNonVeg") || 0) * 500 +
-                    (watch("isAttending") ? 500 : 0)}
-                  for {(watch("totalVeg") || 0) * 1 +
-                    (watch("totalNonVeg") || 0) * 1 +
-                    (watch("isAttending") ? 1 : 0)} 
-                  people.
-                </p>
+            <div className="space-y-6">
+              {hasPreviousContribution && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center">
+                    <svg
+                      className="h-5 w-5 text-green-400 mr-2"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <p className="text-green-800">
+                      Previous contribution of ₹{previousContributionAmount} was
+                      successful
+                    </p>
+                  </div>
+                </div>
               )}
-            </div>
 
-            <FormField
-              label="Would you like to make a financial contribution to the event?"
-              name="willContribute"
-              type="checkbox"
-              control={control}
-              errors={errors}
-              required={true}
-            />
-
-            {willContribute && (
               <FormField
-                label="Contribution Amount (in ₹)"
+                label={`${
+                  hasPreviousContribution ? "Additional " : ""
+                }Contribution Amount (in ₹)`}
                 name="contributionAmount"
                 type="number"
                 control={control}
                 errors={errors}
-                required={true}
+                required={!hasPreviousContribution}
                 min={1}
                 valueAsNumber={true}
               />
-            )}
+
+              {watch("contributionAmount") > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex justify-center"
+                >
+                  <button
+                    type="button"
+                    onClick={handlePayment}
+                    disabled={isPaymentProcessing}
+                    className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isPaymentProcessing ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          className="-ml-1 mr-3 h-5 w-5"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                          />
+                        </svg>
+                        {hasPreviousContribution
+                          ? "Contribute More"
+                          : "Proceed to Pay"}{" "}
+                        ₹{watch("contributionAmount")}
+                      </>
+                    )}
+                  </button>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Mission Message Popup */}
+            <AlertDialog
+              isOpen={showMissionMessage}
+              onClose={() => setShowMissionMessage(false)}
+              onConfirm={() => setShowMissionMessage(false)}
+              title="Support UNMA's Mission"
+              message={
+                <div className="space-y-4">
+                  <p className="text-lg">
+                    This event is more than just a gathering - it's a fundraiser
+                    for UNMA's future activities and emergency support
+                    initiatives.
+                  </p>
+                  <p>
+                    Your contribution will directly impact our community. We're
+                    currently supporting alumni from Wayanad and Kozhikode who
+                    lost everything in the 2024 landslides.
+                  </p>
+                  <p className="font-medium text-lg">
+                    UNMA alumni stand together 24/7, supporting each other
+                    through thick and thin. Your generosity strengthens this
+                    support system.
+                  </p>
+                </div>
+              }
+              confirmText="I Understand"
+              singleButton={true}
+              type="info"
+            />
+
+            {/* Contribution Warning Dialog */}
+            <AlertDialog
+              isOpen={showAlertDialog}
+              onClose={() => setShowAlertDialog(false)}
+              onConfirm={() => {
+                alertDialogConfig.onConfirm();
+                setShowAlertDialog(false);
+              }}
+              title={alertDialogConfig.title}
+              message={alertDialogConfig.message}
+              confirmText="Proceed with current amount"
+              cancelText="Add more amount"
+              type="warning"
+            />
           </FormSection>
         )}
 
         {/* Optional Details Step */}
-        {currentStep === 7 && (
+        {currentStep === 8 && (
           <FormSection title="Optional Information">
-            <FormField
-              label="Is your spouse also a Navodayan?"
-              name="spouseNavodayan"
-              type="select"
-              control={control}
-              errors={errors}
-              options={[
-                { value: "", label: "Select an option" },
-                { value: "Yes", label: "Yes" },
-                { value: "No", label: "No" },
-              ]}
-            />
+            <div className="space-y-6">
+              {/* Spouse Navodayan */}
+              <FormField
+                label="Is your spouse a Navodayan?"
+                name="spouseNavodayan"
+                type="select"
+                control={control}
+                errors={errors}
+                options={[
+                  { value: "", label: "Select an option" },
+                  { value: "yes", label: "Yes" },
+                  { value: "no", label: "No" },
+                ]}
+              />
 
-            <FormField
-              label="Would you like to join UNMA family WhatsApp groups?"
-              name="unmaFamilyGroups"
-              type="checkbox"
-              control={control}
-              errors={errors}
-            />
+              {/* UNMA Family Groups */}
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="unmaFamilyGroups"
+                  checked={watch("unmaFamilyGroups")}
+                  onChange={(checked) => setValue("unmaFamilyGroups", checked)}
+                />
+                <label
+                  htmlFor="unmaFamilyGroups"
+                  className="text-sm font-medium text-gray-700"
+                >
+                  I am part of UNMA family groups
+                </label>
+              </div>
 
-            <FormField
-              label="Mentorship: I can mentor Navodayan students/alumni in"
-              name="mentorshipOptions"
-              type="multiselect"
-              control={control}
-              errors={errors}
-              options={[
-                { value: "Career Guidance", label: "Career Guidance" },
-                { value: "Higher Education", label: "Higher Education" },
-                { value: "Entrepreneurship", label: "Entrepreneurship" },
-                { value: "Technology", label: "Technology" },
-                { value: "Arts and Culture", label: "Arts and Culture" },
-                { value: "Sports", label: "Sports" },
-              ]}
-            />
+              {/* Mentorship Options */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Groups you can mentor
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {MENTORSHIP_OPTIONS.map((option) => (
+                    <div
+                      key={option.value}
+                      className="flex items-center space-x-2"
+                    >
+                      <Checkbox
+                        id={`mentorship-${option.value}`}
+                        checked={watch("mentorshipOptions")?.includes(
+                          option.value
+                        )}
+                        onChange={(checked) => {
+                          const current = watch("mentorshipOptions") || [];
+                          setValue(
+                            "mentorshipOptions",
+                            checked
+                              ? [...current, option.value]
+                              : current.filter((v) => v !== option.value)
+                          );
+                        }}
+                      />
+                      <label
+                        htmlFor={`mentorship-${option.value}`}
+                        className="text-sm text-gray-700"
+                      >
+                        {option.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-            <FormField
-              label="Training: I can conduct training sessions on"
-              name="trainingOptions"
-              type="multiselect"
-              control={control}
-              errors={errors}
-              options={[
-                { value: "Technical Skills", label: "Technical Skills" },
-                { value: "Soft Skills", label: "Soft Skills" },
-                { value: "Leadership", label: "Leadership" },
-                { value: "Financial Literacy", label: "Financial Literacy" },
-                { value: "Other", label: "Other" },
-              ]}
-            />
+              {/* Training Options */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Groups you can train
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {TRAINING_OPTIONS.map((option) => (
+                    <div
+                      key={option.value}
+                      className="flex items-center space-x-2"
+                    >
+                      <Checkbox
+                        id={`training-${option.value}`}
+                        checked={watch("trainingOptions")?.includes(
+                          option.value
+                        )}
+                        onChange={(checked) => {
+                          const current = watch("trainingOptions") || [];
+                          setValue(
+                            "trainingOptions",
+                            checked
+                              ? [...current, option.value]
+                              : current.filter((v) => v !== option.value)
+                          );
+                        }}
+                      />
+                      <label
+                        htmlFor={`training-${option.value}`}
+                        className="text-sm text-gray-700"
+                      >
+                        {option.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-            <FormField
-              label="Seminars: I can participate in seminars on"
-              name="seminarOptions"
-              type="multiselect"
-              control={control}
-              errors={errors}
-              options={[
-                { value: "Education", label: "Education" },
-                { value: "Healthcare", label: "Healthcare" },
-                { value: "Technology", label: "Technology" },
-                { value: "Environment", label: "Environment" },
-                { value: "Social Issues", label: "Social Issues" },
-                { value: "Other", label: "Other" },
-              ]}
-            />
+              {/* Seminar Options */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Groups you can provide seminars to
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {SEMINAR_OPTIONS.map((option) => (
+                    <div
+                      key={option.value}
+                      className="flex items-center space-x-2"
+                    >
+                      <Checkbox
+                        id={`seminar-${option.value}`}
+                        checked={watch("seminarOptions")?.includes(
+                          option.value
+                        )}
+                        onChange={(checked) => {
+                          const current = watch("seminarOptions") || [];
+                          setValue(
+                            "seminarOptions",
+                            checked
+                              ? [...current, option.value]
+                              : current.filter((v) => v !== option.value)
+                          );
+                        }}
+                      />
+                      <label
+                        htmlFor={`seminar-${option.value}`}
+                        className="text-sm text-gray-700"
+                      >
+                        {option.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-            <FormField
-              label="Blood Group (for emergencies)"
-              name="bloodGroup"
-              type="select"
-              control={control}
-              errors={errors}
-              options={[
-                { value: "", label: "Select blood group" },
-                { value: "A+", label: "A+" },
-                { value: "A-", label: "A-" },
-                { value: "B+", label: "B+" },
-                { value: "B-", label: "B-" },
-                { value: "AB+", label: "AB+" },
-                { value: "AB-", label: "AB-" },
-                { value: "O+", label: "O+" },
-                { value: "O-", label: "O-" },
-              ]}
-            />
+              {/* T-Shirt Interest */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="tshirtInterest"
+                    checked={watch("tshirtInterest")}
+                    onChange={(checked) => setValue("tshirtInterest", checked)}
+                  />
+                  <label
+                    htmlFor="tshirtInterest"
+                    className="text-sm font-medium text-gray-700"
+                  >
+                    I am interested in buying UNMA Custom T-Shirt
+                  </label>
+                </div>
+
+                {/* T-Shirt Sizes */}
+                {watch("tshirtInterest") && (
+                  <div className="mt-4 space-y-4">
+                    <h4 className="text-sm font-medium text-gray-700">
+                      Select sizes and quantities:
+                    </h4>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {TSHIRT_SIZES.map((size) => (
+                        <div key={size.value} className="space-y-2">
+                          <label className="block text-sm text-gray-700">
+                            {size.label}
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={watch(`tshirtSizes.${size.value}`) || 0}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 0;
+                              setValue(`tshirtSizes.${size.value}`, value, {
+                                shouldValidate: true,
+                              });
+                            }}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </FormSection>
         )}
 

@@ -1,88 +1,97 @@
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 
-const questions = [
-  {
-    id: 1,
-    question: "What does UNMA stand for?",
-    options: [
-      "United Nations Mission Association",
-      "United Navodaya Mission Association",
-      "Universal Navodaya Mission Association",
-      "United Navodaya Members Association",
-    ],
-    correctAnswer: 3, // Index of correct answer
-  },
-  {
-    id: 2,
-    question: "Which year was JNV scheme started?",
-    options: ["1984", "1985", "1986", "1987"],
-    correctAnswer: 2,
-  },
-  {
-    id: 3,
-    question: "What is the motto of JNV?",
-    options: [
-      "Education for All",
-      "Pure Knowledge is Brahma",
-      "Pace of Progress",
-      "Education for Excellence",
-    ],
-    correctAnswer: 1,
-  },
-];
+const question = {
+  id: 1,
+  question:
+    "Please select the 3 most relevant options related to your 7 years JNV life:",
+  options: [
+    "Mess Hall",
+    "PT",
+    "SUPW",
+    "House Master",
+    "Upuma",
+    "Sambar",
+    "Principal",
+    "School Captain",
+    "We shall Overcome",
+    "Assembly",
+    "Roll Number",
+    "Cluster Meet",
+    "Residence",
+    "Dormitory",
+    "Head Master",
+    "Head Boy",
+    "Vindya",
+    
+  ],
+  correctAnswers: [
+    "Mess Hall",
+    "Cluster Meet",
+    "Dormitory",
+    "Roll Number",
+    "We shall Overcome",
+    "PT",
+    "SUPW",
+    "House Master",
+    "Principal",
+    "Assembly",
+  ], // These are the correct options
+  requiredCorrect: 3, // Number of correct answers needed to pass
+};
 
 const VerificationQuiz = ({ onQuizComplete }) => {
-  const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [selectedAnswers, setSelectedAnswers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [score, setScore] = useState(0);
   const [isPassed, setIsPassed] = useState(false);
 
-  const handleAnswerSelect = (questionId, answerIndex) => {
-    // Only allow changes if results are not being shown
+  const handleAnswerSelect = (option) => {
     if (!showResults) {
-      setSelectedAnswers((prev) => ({
-        ...prev,
-        [questionId]: answerIndex,
-      }));
+      setSelectedAnswers((prev) => {
+        if (prev.includes(option)) {
+          return prev.filter((item) => item !== option);
+        }
+        if (prev.length < 3) {
+          return [...prev, option];
+        }
+        return prev;
+      });
     }
   };
 
   const handleSubmit = () => {
     setIsSubmitting(true);
 
-    // Check if all questions are answered
-    if (Object.keys(selectedAnswers).length < questions.length) {
-      toast.error("Please answer all questions");
+    // Check if exactly 3 options are selected
+    if (selectedAnswers.length !== 3) {
+      toast.error("Please select exactly 3 options");
       setIsSubmitting(false);
       return;
     }
 
     // Calculate score
-    const newScore = questions.reduce((acc, question) => {
-      return (
-        acc + (selectedAnswers[question.id] === question.correctAnswer ? 1 : 0)
-      );
-    }, 0);
+    const correctCount = selectedAnswers.filter((answer) =>
+      question.correctAnswers.includes(answer)
+    ).length;
 
-    // Need to get at least 2 correct to pass
-    const passed = newScore >= 2;
+    const passed = correctCount >= question.requiredCorrect;
 
-    setScore(newScore);
+    setScore(correctCount);
     setIsPassed(passed);
     setShowResults(true);
 
     if (passed) {
       toast.success(
-        `Quiz passed! You got ${newScore}/${questions.length} correct.`
+        `Quiz passed! You got ${correctCount}/${question.requiredCorrect} correct.`
       );
       setTimeout(() => {
         onQuizComplete(true);
-      }, 2000); // Give user 2 seconds to see their results before proceeding
+      }, 2000);
     } else {
       toast.error(
-        `You got ${newScore}/${questions.length} correct. Need at least 2 correct answers.`
+        `You got ${correctCount}/${question.requiredCorrect} correct. Need at least ${question.requiredCorrect} correct answers.`
       );
     }
 
@@ -90,7 +99,7 @@ const VerificationQuiz = ({ onQuizComplete }) => {
   };
 
   const handleRetry = () => {
-    setSelectedAnswers({});
+    setSelectedAnswers([]);
     setShowResults(false);
     setScore(0);
     setIsPassed(false);
@@ -102,74 +111,79 @@ const VerificationQuiz = ({ onQuizComplete }) => {
         Verification Quiz
       </h3>
       <p className="text-sm text-gray-600 mb-6">
-        Please answer these questions to verify your JNV background. You need at
-        least 2 correct answers to proceed.
+        Please select exactly 3 options that best represent your JNV experience.
+        You need at least {question.requiredCorrect} correct answers to proceed.
       </p>
 
-      {questions.map((q, index) => (
-        <div key={q.id} className="mb-6">
-          <p className="font-medium text-gray-700 mb-3">
-            {index + 1}. {q.question}
-          </p>
-          <div className="space-y-2">
-            {q.options.map((option, optionIndex) => (
-              <label
-                key={optionIndex}
-                className={`flex items-center p-3 space-x-3 cursor-pointer border rounded-md 
-                  ${
-                    showResults && optionIndex === q.correctAnswer
-                      ? "border-green-500 bg-green-50"
-                      : ""
-                  }
-                  ${
-                    showResults &&
-                    selectedAnswers[q.id] === optionIndex &&
-                    optionIndex !== q.correctAnswer
-                      ? "border-red-500 bg-red-50"
-                      : ""
-                  }
-                  ${
-                    !showResults && selectedAnswers[q.id] === optionIndex
-                      ? "border-blue-500 bg-blue-50"
-                      : ""
-                  }
-                  ${
-                    !showResults && selectedAnswers[q.id] !== optionIndex
-                      ? "border-gray-200"
-                      : ""
-                  }
-                  ${showResults ? "cursor-default" : "hover:bg-gray-50"}`}
-              >
-                <input
-                  type="radio"
-                  name={`question-${q.id}`}
-                  checked={selectedAnswers[q.id] === optionIndex}
-                  onChange={() => handleAnswerSelect(q.id, optionIndex)}
-                  disabled={showResults}
-                  className="form-radio h-4 w-4 text-blue-600"
-                />
-                <span className="text-gray-700">{option}</span>
-                {showResults && optionIndex === q.correctAnswer && (
-                  <span className="ml-auto text-green-600">✓ Correct</span>
+      <div className="mb-6">
+        <p className="font-medium text-gray-700 mb-3">{question.question}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          {question.options.map((option, index) => (
+            <label
+              key={index}
+              className={`flex items-center p-3 space-x-3 cursor-pointer border rounded-md 
+                ${
+                  showResults && question.correctAnswers.includes(option)
+                    ? "border-green-500 bg-green-50"
+                    : ""
+                }
+                ${
+                  showResults &&
+                  selectedAnswers.includes(option) &&
+                  !question.correctAnswers.includes(option)
+                    ? "border-red-500 bg-red-50"
+                    : ""
+                }
+                ${
+                  !showResults && selectedAnswers.includes(option)
+                    ? "border-blue-500 bg-blue-50"
+                    : ""
+                }
+                ${
+                  !showResults && !selectedAnswers.includes(option)
+                    ? "border-gray-200"
+                    : ""
+                }
+                ${showResults ? "cursor-default" : "hover:bg-gray-50"}
+                ${
+                  selectedAnswers.length >= 3 &&
+                  !selectedAnswers.includes(option)
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
+            >
+              <input
+                type="checkbox"
+                checked={selectedAnswers.includes(option)}
+                onChange={() => handleAnswerSelect(option)}
+                disabled={
+                  showResults ||
+                  (selectedAnswers.length >= 3 &&
+                    !selectedAnswers.includes(option))
+                }
+                className="form-checkbox h-4 w-4 text-blue-600"
+              />
+              <span className="text-gray-700">{option}</span>
+              {showResults && question.correctAnswers.includes(option) && (
+                <span className="ml-auto text-green-600">✓ Correct</span>
+              )}
+              {showResults &&
+                selectedAnswers.includes(option) &&
+                !question.correctAnswers.includes(option) && (
+                  <span className="ml-auto text-red-600">✗ Incorrect</span>
                 )}
-                {showResults &&
-                  selectedAnswers[q.id] === optionIndex &&
-                  optionIndex !== q.correctAnswer && (
-                    <span className="ml-auto text-red-600">✗ Incorrect</span>
-                  )}
-              </label>
-            ))}
-          </div>
+            </label>
+          ))}
         </div>
-      ))}
+        <p className="text-sm text-gray-500 mt-2">
+          Selected: {selectedAnswers.length}/3
+        </p>
+      </div>
 
       {!showResults ? (
         <button
           onClick={handleSubmit}
-          disabled={
-            isSubmitting ||
-            Object.keys(selectedAnswers).length < questions.length
-          }
+          disabled={isSubmitting || selectedAnswers.length !== 3}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50"
         >
           {isSubmitting ? "Checking..." : "Submit Answers"}
@@ -183,8 +197,8 @@ const VerificationQuiz = ({ onQuizComplete }) => {
           >
             <p className="font-medium">
               {isPassed
-                ? `Congratulations! You scored ${score}/${questions.length} and passed.`
-                : `You scored ${score}/${questions.length}. At least 2 correct answers required.`}
+                ? `Congratulations! You got ${score}/${question.requiredCorrect} correct and passed.`
+                : `You got ${score}/${question.requiredCorrect} correct. At least ${question.requiredCorrect} correct answers required.`}
             </p>
             {isPassed && (
               <p className="text-sm mt-1">Proceeding to the next step...</p>

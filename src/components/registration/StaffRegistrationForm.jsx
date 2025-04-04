@@ -17,7 +17,7 @@ import {
 import StepIndicator from "./StepIndicator";
 import PhoneInput from "react-phone-input-2";
 
-import {  indianStatesOptions } from "../../assets/data";
+import { indianStatesOptions } from "../../assets/data";
 
 import countries from "i18n-iso-countries";
 import enLocale from "i18n-iso-countries/langs/en.json";
@@ -31,9 +31,6 @@ const countryOptions = Object.entries(countries.getNames("en"))
     label: label,
   }))
   .sort((a, b) => a.label.localeCompare(b.label));
-
-
-
 
 const StaffRegistrationForm = ({ onBack, storageKey }) => {
   const navigate = useNavigate();
@@ -337,7 +334,7 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
               required={true}
             />
 
-<div className="mb-4">
+            <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Contact Number *
               </label>
