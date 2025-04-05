@@ -78,6 +78,26 @@ const Header = () => {
           >
             Register
           </NavLink>
+          <NavLink
+            to="/contact"
+            className={({ isActive }) =>
+              `text-base font-medium hover:text-primary transition-colors ${
+                isActive ? "text-primary" : "text-gray-600"
+              }`
+            }
+          >
+            Contact
+          </NavLink>
+          <NavLink
+            to="/report-issue"
+            className={({ isActive }) =>
+              `text-base font-medium hover:text-primary transition-colors ${
+                isActive ? "text-primary" : "text-gray-600"
+              }`
+            }
+          >
+            Report Issue
+          </NavLink>
           <NavLink to="/admin/login" className="btn btn-outline py-2 px-4">
             Admin Login
           </NavLink>
@@ -126,6 +146,32 @@ const Header = () => {
               }
             >
               Register
+            </NavLink>
+            <NavLink
+              to="/contact"
+              onClick={closeMenu}
+              className={({ isActive }) =>
+                `block px-3 py-2 rounded-md text-base font-medium ${
+                  isActive
+                    ? "text-primary bg-gray-50"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+                }`
+              }
+            >
+              Contact
+            </NavLink>
+            <NavLink
+              to="/report-issue"
+              onClick={closeMenu}
+              className={({ isActive }) =>
+                `block px-3 py-2 rounded-md text-base font-medium ${
+                  isActive
+                    ? "text-primary bg-gray-50"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+                }`
+              }
+            >
+              Report Issue
             </NavLink>
             <NavLink
               to="/admin/login"

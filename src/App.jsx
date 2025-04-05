@@ -17,6 +17,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const Analytics = lazy(() => import("./pages/admin/Analytics"));
 const Settings = lazy(() => import("./pages/admin/Settings"));
 const RegistrationSuccess = lazy(() => import("./pages/RegistrationSuccess"));
+const Contact = lazy(() => import("./pages/Contact"));
 import ReportIssue from "./pages/ReportIssue";
 import AlumniRegistrationForm from "./components/registration/AlumniRegistrationForm";
 
@@ -37,6 +38,7 @@ function App() {
                   element={<RegistrationSuccess />}
                 />
                 <Route path="/report-issue" element={<ReportIssue />} />
+                <Route path="/contact" element={<Contact />} />
               </Route>
 
               {/* Admin Routes */}
