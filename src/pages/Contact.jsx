@@ -5,8 +5,10 @@ import {
   PhoneIcon,
   EnvelopeIcon,
   ArrowRightIcon,
+  HomeIcon,
 } from "@heroicons/react/24/outline";
 import { toast } from "react-hot-toast";
+import ScrollLink from "../components/ui/ScrollLink";
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -67,6 +69,15 @@ const Contact = () => {
                 Have questions about the UNMA 2025 reunion? We're here to help!
                 Feel free to reach out using any of the methods below.
               </p>
+              <div className="mt-6">
+                <ScrollLink
+                  to="/"
+                  className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full transition duration-300"
+                >
+                  <HomeIcon className="w-5 h-5" />
+                  Return to Home
+                </ScrollLink>
+              </div>
             </motion.div>
           </div>
         </div>
@@ -229,7 +240,8 @@ const Contact = () => {
                         Our Address
                       </h3>
                       <p className="text-gray-600 mt-1">
-                        First Floor Panathra Blog , Naer High Court of Kerala , Kochi - 682018
+                        First Floor Panathra Blog , Naer High Court of Kerala ,
+                        Kochi - 682018
                       </p>
                     </div>
                   </div>
@@ -250,9 +262,7 @@ const Contact = () => {
                           +91 971 507425588
                         </a>
                       </p>
-                      <p className="text-gray-500 text-sm">
-                        Available 24 * 7
-                      </p>
+                      <p className="text-gray-500 text-sm">Available 24 * 7</p>
                     </div>
                   </div>
 
@@ -289,12 +299,12 @@ const Contact = () => {
                   Before contacting us, you might find answers to your questions
                   in our FAQ section.
                 </p>
-                <a
-                  href="/faq"
+                <ScrollLink
+                  to="/#faq"
                   className="inline-flex items-center text-primary hover:text-primary-dark gap-1 font-medium"
                 >
                   View All FAQs <ArrowRightIcon className="w-4 h-4" />
-                </a>
+                </ScrollLink>
               </div>
             </motion.div>
           </div>

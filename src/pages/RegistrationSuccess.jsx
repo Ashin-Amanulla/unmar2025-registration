@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { useLocation, Link } from "react-router-dom";
 import confetti from "canvas-confetti";
+import ScrollLink from "../components/ui/ScrollLink";
 
 const RegistrationSuccess = () => {
   const location = useLocation();
@@ -98,7 +99,8 @@ const RegistrationSuccess = () => {
                     🤝 Networking Opportunities
                   </p>
                   <p className="text-green-600">
-                    Connect with fellow Navodayans from various batches and fields
+                    Connect with fellow Navodayans from various batches and
+                    fields
                   </p>
                 </div>
                 <div className="bg-purple-50 rounded-lg p-4">
@@ -140,7 +142,9 @@ const RegistrationSuccess = () => {
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-green-500">✓</span>
-                  <span>Join our WhatsApp group for updates (link in email)</span>
+                  <span>
+                    Join our WhatsApp group for updates (link in email)
+                  </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="text-green-500">✓</span>
@@ -159,12 +163,12 @@ const RegistrationSuccess = () => {
                   Have questions or facing issues? We're here to help!
                 </p>
                 <div className="flex flex-wrap gap-4">
-                  <Link
+                  <ScrollLink
                     to="/report-issue"
                     className="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md text-blue-600 hover:bg-blue-50"
                   >
                     🐛 Report an Issue
-                  </Link>
+                  </ScrollLink>
                   <a
                     href="mailto:support@unma.in"
                     className="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md text-blue-600 hover:bg-blue-50"
@@ -177,6 +181,12 @@ const RegistrationSuccess = () => {
                   >
                     📞 Call Helpline
                   </a>
+                  <ScrollLink
+                    to="/"
+                    className="inline-flex items-center px-4 py-2 border border-blue-600 rounded-md text-blue-600 hover:bg-blue-50"
+                  >
+                    🏠 Return Home
+                  </ScrollLink>
                 </div>
               </div>
             </div>
@@ -184,7 +194,8 @@ const RegistrationSuccess = () => {
             {/* Fun Quote */}
             <div className="text-center mt-8 pt-8 border-t border-gray-200">
               <p className="text-lg text-gray-600 italic">
-                "The JNV spirit never graduates - it just keeps getting stronger! 💪"
+                "The JNV spirit never graduates - it just keeps getting
+                stronger! 💪"
               </p>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import ScrollLink from "../ui/ScrollLink";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -69,7 +70,7 @@ const Header = () => {
             Home
           </NavLink>
           <NavLink
-            to="/register"
+            to="/registration"
             className={({ isActive }) =>
               `text-base font-medium hover:text-primary transition-colors ${
                 isActive ? "text-primary" : "text-gray-600"
@@ -78,6 +79,12 @@ const Header = () => {
           >
             Register
           </NavLink>
+          <ScrollLink
+            to="/#faq"
+            className="text-base font-medium text-gray-600 hover:text-primary transition-colors"
+          >
+            FAQ
+          </ScrollLink>
           <NavLink
             to="/contact"
             className={({ isActive }) =>
@@ -135,7 +142,7 @@ const Header = () => {
               Home
             </NavLink>
             <NavLink
-              to="/register"
+              to="/registration"
               onClick={closeMenu}
               className={({ isActive }) =>
                 `block px-3 py-2 rounded-md text-base font-medium ${
@@ -147,6 +154,14 @@ const Header = () => {
             >
               Register
             </NavLink>
+            <div
+              onClick={closeMenu}
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-primary"
+            >
+              <ScrollLink to="/#faq" className="w-full inline-block">
+                FAQ
+              </ScrollLink>
+            </div>
             <NavLink
               to="/contact"
               onClick={closeMenu}

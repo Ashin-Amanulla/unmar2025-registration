@@ -727,7 +727,7 @@ const Home = () => {
         </section>
 
         {/* FAQ */}
-        <section className="py-24 bg-white">
+        <section id="faq" className="py-24 bg-white">
           <div className="container">
             <motion.div
               initial={{ y: 30, opacity: 0 }}

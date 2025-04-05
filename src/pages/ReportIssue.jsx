@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "react-toastify";
 import { motion } from "framer-motion";
+import ScrollLink from "../components/ui/ScrollLink";
+import { Link } from "react-router-dom";
 
 const ReportIssue = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -11,14 +13,6 @@ const ReportIssue = () => {
     reset,
     formState: { errors },
   } = useForm();
-
-  const funnyPlaceholders = [
-    "The form is acting like it had too much coffee ☕",
-    "My registration disappeared like my JNV homework 📚",
-    "The payment button is playing hide and seek 🙈",
-    "Everything's spinning like PT morning drill 🌪️",
-    "The website is slower than mess queue on Sunday 🐌",
-  ];
 
   const onSubmit = async (data) => {
     setIsSubmitting(true);
@@ -30,12 +24,12 @@ const ReportIssue = () => {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       toast.success(
-        "🎯 Issue reported successfully! We're on it like a Navodayan on morning bell!"
+        "Issue reported successfully. We will investigate and resolve it as soon as possible."
       );
       reset();
     } catch (error) {
       toast.error(
-        "Oops! Something went wrong. Even our best prefects couldn't handle this one! 😅"
+        "An error occurred while submitting your report. Please try again later."
       );
     } finally {
       setIsSubmitting(false);
@@ -47,18 +41,13 @@ const ReportIssue = () => {
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-purple-600 to-purple-800 px-8 py-12 text-center">
-            <div className="text-5xl mb-4 flex justify-center gap-4">
-              <span>🔧</span>
-              <span>🐛</span>
-              <span>🎯</span>
-            </div>
+          <div className="bg-gradient-to-r from-primary to-primary-dark px-8 py-12 text-center">
             <h1 className="text-3xl font-bold text-white mb-2">
-              Houston, We Have a Problem!
+              Report an Issue
             </h1>
-            <p className="text-purple-100 text-lg">
-              Don't worry, our tech team is better at fixing bugs than we were
-              at fixing mess food! 😄
+            <p className="text-white/90 text-lg">
+              Let us know about any problems you encounter with the registration
+              process or website.
             </p>
           </div>
 
@@ -68,22 +57,20 @@ const ReportIssue = () => {
               {/* Issue Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  What kind of issue are you facing? 🤔
+                  Issue Type
                 </label>
                 <select
                   {...register("issueType", {
                     required: "Please select an issue type",
                   })}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
                 >
                   <option value="">Select issue type</option>
-                  <option value="registration">Registration Issues 📝</option>
-                  <option value="payment">Payment Problems 💰</option>
-                  <option value="technical">Technical Glitches 💻</option>
-                  <option value="content">Content/Information Issues ℹ️</option>
-                  <option value="other">
-                    Other (Because life is complicated!) 🤷
-                  </option>
+                  <option value="registration">Registration Issues</option>
+                  <option value="payment">Payment Problems</option>
+                  <option value="technical">Technical Issues</option>
+                  <option value="content">Content/Information Issues</option>
+                  <option value="other">Other</option>
                 </select>
                 {errors.issueType && (
                   <p className="mt-1 text-sm text-red-600">
@@ -95,24 +82,19 @@ const ReportIssue = () => {
               {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Tell us what's bothering you 🎭
+                  Issue Description
                 </label>
                 <textarea
                   {...register("description", {
                     required: "Please describe the issue",
                     minLength: {
                       value: 20,
-                      message:
-                        "A bit more detail would help us understand better!",
+                      message: "Please provide more details about the issue",
                     },
                   })}
-                  placeholder={
-                    funnyPlaceholders[
-                      Math.floor(Math.random() * funnyPlaceholders.length)
-                    ]
-                  }
+                  placeholder="Please describe the issue in detail, including steps to reproduce if applicable"
                   rows={4}
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
                 />
                 {errors.description && (
                   <p className="mt-1 text-sm text-red-600">
@@ -124,7 +106,7 @@ const ReportIssue = () => {
               {/* Contact Info */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  How can we reach you? 📞
+                  Contact Email
                 </label>
                 <input
                   type="email"
@@ -132,12 +114,11 @@ const ReportIssue = () => {
                     required: "Email is required",
                     pattern: {
                       value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message:
-                        "That doesn't look like an email we learned in computer class! 🤓",
+                      message: "Please enter a valid email address",
                     },
                   })}
                   placeholder="your.email@example.com"
-                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
                 />
                 {errors.email && (
                   <p className="mt-1 text-sm text-red-600">
@@ -150,7 +131,7 @@ const ReportIssue = () => {
               <motion.button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -176,41 +157,64 @@ const ReportIssue = () => {
                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                       ></path>
                     </svg>
-                    Sending to our Fix-it Squad...
+                    Submitting Report...
                   </span>
                 ) : (
-                  "🚀 Send it to the Tech Team!"
+                  "Submit Issue Report"
                 )}
               </motion.button>
             </form>
 
-            {/* Fun Footer */}
-            <div className="mt-8 pt-6 border-t border-gray-200 text-center">
-              <p className="text-sm text-gray-500">
-                Remember when we used to fix everything with "Have you tried
-                turning it off and on again?" We've evolved! 😎
+            {/* Additional Information */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900 mb-3">
+                Additional Information
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Our support team will review your issue report and respond
+                within 24-48 hours. For urgent matters, please contact us
+                directly via phone or email on our contact page.
               </p>
+              <div className="flex justify-between items-center">
+                <motion.div
+                  whileHover={{ scale: 1.03 }}
+                  className="text-primary hover:text-primary-dark"
+                >
+                  <Link to="/contact" className="text-sm font-medium">
+                    Contact Us Directly
+                  </Link>
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.03 }}
+                  className="text-primary hover:text-primary-dark"
+                >
+                  <ScrollLink to="/" className="text-sm font-medium">
+                    Return to Home
+                  </ScrollLink>
+                </motion.div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Fun Facts */}
+        {/* Support Information */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Did You Know? 🤓
+              Technical Support Hours
             </h3>
             <p className="text-gray-600">
-              Our tech team solves bugs faster than we solved JNV morning
-              puzzles!
+              Monday to Friday: 9:00 AM - 6:00 PM IST
             </p>
+            <p className="text-gray-600">Email response: Within 24 hours</p>
           </div>
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Fun Fact! 🎈
+              Common Solutions
             </h3>
             <p className="text-gray-600">
-              99% of issues are solved before the next assembly bell!
+              For payment issues, please ensure your browser is updated and try
+              clearing your cache.
             </p>
           </div>
         </div>
