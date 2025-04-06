@@ -128,26 +128,6 @@ const Header = () => {
                 </>
               )}
             </NavLink>
-
-            <NavLink
-              to="/report-issue"
-              className={({ isActive }) =>
-                `px-3 py-2 my-1 rounded-lg transition-all duration-200 relative whitespace-nowrap ${
-                  isActive
-                    ? "text-primary font-medium"
-                    : "text-gray-600 hover:text-primary hover:bg-gray-50"
-                }`
-              }
-            >
-              {({ isActive }) => (
-                <>
-                  Report Issue
-                  {isActive && (
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded"></span>
-                  )}
-                </>
-              )}
-            </NavLink>
           </div>
         </nav>
 
@@ -240,22 +220,6 @@ const Header = () => {
 
             <div className="py-2">
               <NavLink
-                to="/report-issue"
-                onClick={closeMenu}
-                className={({ isActive }) =>
-                  `block px-4 py-2 rounded-md text-base whitespace-nowrap ${
-                    isActive
-                      ? "text-primary font-medium bg-blue-50"
-                      : "text-gray-600 hover:bg-gray-50 hover:text-primary"
-                  }`
-                }
-              >
-                Report Issue
-              </NavLink>
-            </div>
-
-            <div className="py-2">
-              <NavLink
                 to="/admin/login"
                 onClick={closeMenu}
                 className="block px-4 py-2 rounded-md text-base font-medium text-blue-600 hover:bg-blue-50"
@@ -270,4 +234,62 @@ const Header = () => {
   );
 };
 
+// Floating Report Issue Button Component
+const FloatingReportButton = () => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <div className="fixed bottom-6 right-6 z-40">
+      {isOpen && (
+        <div className="absolute bottom-16 right-0 bg-white rounded-lg shadow-lg p-4 w-64 mb-2 border border-gray-200">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-medium text-gray-900">
+              Report an Issue
+            </h3>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-gray-400 hover:text-gray-500"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
+          <p className="text-xs text-gray-600 mb-3">
+            Encountered a problem? Let us know so we can fix it.
+          </p>
+          <NavLink
+            to="/report-issue"
+            className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+            onClick={() => setIsOpen(false)}
+          >
+            Report Issue
+          </NavLink>
+        </div>
+      )}
+
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="bg-red-600 hover:bg-red-700 text-white rounded-full p-3 shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-105"
+        title="Report an Issue"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-6 w-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+        </svg>
+      </button>
+    </div>
+  );
+};
+
+// Export both components
+export { FloatingReportButton };
 export default Header;

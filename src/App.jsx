@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Loading from "./components/ui/Loading";
 import AdminLayout from "./components/layout/AdminLayout";
 import BasicLayout from "./components/layout/BasicLayout";
+import Header, { FloatingReportButton } from "./components/layout/Header";
+import Footer from "./components/layout/Footer";
 // Lazy load pages
 const Home = lazy(() => import("./pages/Home"));
 const Registration = lazy(() => import("./pages/Registration"));
@@ -59,6 +61,7 @@ function App() {
             </Routes>
           </Suspense>
         </main>
+        <FloatingReportButton />
       </div>
     </Router>
   );
