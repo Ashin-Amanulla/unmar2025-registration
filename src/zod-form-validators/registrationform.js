@@ -27,11 +27,11 @@ const BaseRegistrationSchema = z.object({
     totalVeg: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
-      ),
-      totalNonVeg: z.preprocess(
+    ),
+    totalNonVeg: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
-      ),
+    ),
     // Financial contribution
     willContribute: z.boolean(),
     contributionAmount: z.number().int().min(0),
@@ -61,11 +61,11 @@ const AlumniSchema = BaseRegistrationSchema.extend({
     totalVeg: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
-      ),
+    ),
     totalNonVeg: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
-      ),
+    ),
     eventContribution: z.array(z.string()).optional(),
     contributionDetails: z.string().optional(),
 
@@ -78,7 +78,7 @@ const AlumniSchema = BaseRegistrationSchema.extend({
     coShareSeats: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
-      ),
+    ),
     landmarks: z.string().optional(),
     travelRemarks: z.string().optional(),
 
@@ -87,7 +87,7 @@ const AlumniSchema = BaseRegistrationSchema.extend({
     accommodationCapacity: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
-      ),
+    ),
     accommodationLocation: z.string().optional(),
     accommodationRemarks: z.string().optional(),
 
@@ -96,12 +96,13 @@ const AlumniSchema = BaseRegistrationSchema.extend({
     contributionAmount: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
-      ),
+    ),
     proposedAmount: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
-      ),
+    ),
     paymentStatus: z.enum(["Pending", "Completed", "Failed"]).optional(),
+    paymentId: z.string().optional(),
     paymentDetails: z.string().optional(),
     paymentRemarks: z.string().optional(),
 
@@ -166,35 +167,69 @@ const StaffSchema = BaseRegistrationSchema.extend({
 
     // Event Attendance
     isAttending: z.boolean(),
-    foodPreference: z.enum(["vegetarian", "non-vegetarian", "both"]).optional(),
-    totalVeg: z.preprocess(
-        (val) => (val === "" ? undefined : Number(val)),
-        z.number().min(0).optional()
-      ),
-    totalNonVeg: z.preprocess(
-        (val) => (val === "" ? undefined : Number(val)),
-        z.number().min(0).optional()
-      ),
+
+    // Attendees structure
+    attendees: z.object({
+        adults: z.object({
+            veg: z.number().int().min(0).default(0),
+            nonVeg: z.number().int().min(0).default(0),
+        }).default({ veg: 0, nonVeg: 0 }),
+        teens: z.object({
+            veg: z.number().int().min(0).default(0),
+            nonVeg: z.number().int().min(0).default(0),
+        }).default({ veg: 0, nonVeg: 0 }),
+        children: z.object({
+            veg: z.number().int().min(0).default(0),
+            nonVeg: z.number().int().min(0).default(0),
+        }).default({ veg: 0, nonVeg: 0 }),
+        toddlers: z.object({
+            veg: z.number().int().min(0).default(0),
+            nonVeg: z.number().int().min(0).default(0),
+        }).default({ veg: 0, nonVeg: 0 }),
+    }).default({
+        adults: { veg: 0, nonVeg: 0 },
+        teens: { veg: 0, nonVeg: 0 },
+        children: { veg: 0, nonVeg: 0 },
+        toddlers: { veg: 0, nonVeg: 0 },
+    }),
+
+    eventContribution: z.array(z.string()).optional(),
+    contributionDetails: z.string().optional(),
+
+    // Sponsorship
+    interestedInSponsorship: z.boolean().optional(),
+    sponsorshipType: z.array(z.string()).optional(),
+    sponsorshipDetails: z.string().optional(),
 
     // Transportation
-    travellingFrom: z.string().optional(),
-    travelDateTime: z.string().optional(),
-    modeOfTravel: z.enum(["Car", "Train", "Flight", "Other"]).optional(),
-    needParking: z.boolean().optional(),
-    carPooling: z.enum(["No", "Yes To Venue", "Yes From Venue", "Yes Both Ways"]).optional(),
-    coShareSeats: z.preprocess(
+    startPincode: z.string().optional(),
+    district: z.string().optional(),
+    state: z.string().optional(),
+    taluk: z.string().optional(),
+    originArea: z.string().optional(),
+    nearestLandmark: z.string().optional(),
+    travelDate: z.string().optional(),
+    travelTime: z.string().optional(),
+    modeOfTransport: z.string().optional(),
+    readyForRideShare: z.string().optional(),
+    rideShareCapacity: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
-        z.number().min(0).optional()
-      ),
-    landmarks: z.string().optional(),
-    travelRemarks: z.string().optional(),
+        z.number().min(1).optional()
+    ),
+    needParking: z.string().optional(),
+    wantRideShare: z.string().optional(),
+    rideShareGroupSize: z.preprocess(
+        (val) => (val === "" ? undefined : Number(val)),
+        z.number().min(1).optional()
+    ),
+    travelSpecialRequirements: z.string().optional(),
 
     // Accommodation
     accommodation: z.string().optional(),
     accommodationCapacity: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
-      ),
+    ),
     accommodationLocation: z.string().optional(),
     accommodationRemarks: z.string().optional(),
 
@@ -203,24 +238,16 @@ const StaffSchema = BaseRegistrationSchema.extend({
     contributionAmount: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
-      ),
+    ),
     proposedAmount: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
-      ),
+    ),
     paymentStatus: z.enum(["Pending", "Completed", "Failed"]).optional(),
+    paymentId: z.string().optional(),
+    paymentDetails: z.string().optional(),
+    paymentRemarks: z.string().optional(),
 }).refine(
-    (data) => {
-        if (data.isAttending) {
-            return data.foodPreference !== undefined;
-        }
-        return true;
-    },
-    {
-        message: "Please select your food preference",
-        path: ["foodPreference"],
-    }
-).refine(
     (data) => {
         if (data.willContribute) {
             return data.contributionAmount && data.contributionAmount > 0;
@@ -231,12 +258,49 @@ const StaffSchema = BaseRegistrationSchema.extend({
         message: "Please specify contribution amount",
         path: ["contributionAmount"],
     }
+).refine(
+    (data) => {
+        if (data.isAttending && data.modeOfTransport === "car" && data.readyForRideShare === "yes") {
+            return data.rideShareCapacity && data.rideShareCapacity > 0;
+        }
+        return true;
+    },
+    {
+        message: "Please specify how many people you can accommodate",
+        path: ["rideShareCapacity"],
+    }
+).refine(
+    (data) => {
+        if (data.isAttending) {
+            const attendees = data.attendees;
+            const totalAttendees =
+                (attendees.adults.veg || 0) + (attendees.adults.nonVeg || 0) +
+                (attendees.teens.veg || 0) + (attendees.teens.nonVeg || 0) +
+                (attendees.children.veg || 0) + (attendees.children.nonVeg || 0) +
+                (attendees.toddlers.veg || 0) + (attendees.toddlers.nonVeg || 0);
+
+            return totalAttendees > 0;
+        }
+        return true;
+    },
+    {
+        message: "Please add at least one attendee",
+        path: ["attendees"],
+    }
 );
 
 // Other-specific schema
 const OtherSchema = BaseRegistrationSchema.extend({
     // Other-specific fields
     purpose: z.string().min(10, "Please explain your purpose for attending"),
+    district: z.string().optional(),
+    bloodGroup: z.enum(["", "A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]).optional(),
+
+    // Professional Information
+    profession: z.string().optional(),
+    professionalDetails: z.string().optional(),
+    areaOfExpertise: z.string().optional(),
+    keySkills: z.string().max(500).optional(),
 
     // Event Attendance
     isAttending: z.boolean(),
@@ -244,11 +308,11 @@ const OtherSchema = BaseRegistrationSchema.extend({
     totalVeg: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
-      ),
+    ),
     totalNonVeg: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
-      ),
+    ),
 
     // Transportation
     travellingFrom: z.string().optional(),
@@ -264,8 +328,15 @@ const OtherSchema = BaseRegistrationSchema.extend({
     contributionAmount: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
-      ),
+    ),
+    proposedAmount: z.preprocess(
+        (val) => (val === "" ? undefined : Number(val)),
+        z.number().min(0).optional()
+    ),
     paymentStatus: z.enum(["Pending", "Completed", "Failed"]).optional(),
+    paymentId: z.string().optional(),
+    paymentDetails: z.string().optional(),
+    paymentRemarks: z.string().optional(),
 }).refine(
     (data) => {
         if (data.isAttending) {

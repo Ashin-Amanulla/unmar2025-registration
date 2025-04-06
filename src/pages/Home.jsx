@@ -538,10 +538,10 @@ const Home = () => {
               <span className="inline-block px-6 py-2.5 mb-4 text-sm font-semibold tracking-wider text-white uppercase bg-gradient-to-r from-primary to-primary-dark rounded-full shadow-md">
                 Key Information
               </span>
-              <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
-                Event <span className="text-primary">Details</span>
+              <h2 className="text-4xl sm:text-5xl font-bold text-white-300 mb-6">
+                Event <span className="text-white-900">Details</span>
               </h2>
-              <p className="max-w-3xl mx-auto text-lg text-gray-600">
+              <p className="max-w-3xl mx-auto text-lg text-white">
                 Everything you need to know about the UNMA 2025 reunion. Mark
                 your calendar and prepare for an unforgettable experience.
               </p>
@@ -753,7 +753,7 @@ const Home = () => {
                 {
                   question: "Who can attend the UNMA 2025 event?",
                   answer:
-                    "The event is open to all JNV Kerala alumni. You can also bring your immediate family members along.",
+                    "The event is open to all people who have been part of JNV Community. You can also bring your immediate family members along.",
                 },
                 {
                   question: "How can I register for the event?",
@@ -763,7 +763,7 @@ const Home = () => {
                 {
                   question: "Is there a registration fee?",
                   answer:
-                    "The basic registration is free. However, there are optional donation tiers if you wish to contribute to the event.",
+                    "The basic registration is free. However, there are optional sponsership and financial contribution options if you wish to contribute to the event.",
                 },
                 {
                   question:
@@ -774,7 +774,7 @@ const Home = () => {
                 {
                   question: "Will accommodation be arranged?",
                   answer:
-                    "Yes, we will provide information about accommodation options near the venue. You can specify your requirements during registration.",
+                    "Yes, we will connect you with accommodation options near the venue. You can specify your requirements during registration.",
                 },
               ].map((item, index) => (
                 <motion.div

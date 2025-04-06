@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
+import { motion } from "framer-motion";
 import { RegistrationSchemas } from "../../zod-form-validators/registrationform";
 import { useRegistration } from "../../hooks";
+import { usePayment } from "../../hooks/usePayment";
 import PhoneInput from "react-phone-input-2";
 import {
   FormSection,
@@ -15,8 +17,14 @@ import {
   MobileProgressIndicator,
 } from "./FormComponents";
 import StepIndicator from "./StepIndicator";
+import AttendeeCounter from "./AttendeeCounter";
+import AlertDialog from "../ui/AlertDialog";
 
-import { indianStatesOptions } from "../../assets/data";
+import {
+  indianStatesOptions,
+  KERALA_DISTRICTS,
+  PROFESSION_OPTIONS,
+} from "../../assets/data";
 
 import countries from "i18n-iso-countries";
 import enLocale from "i18n-iso-countries/langs/en.json";
@@ -38,13 +46,25 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
   const [emailVerified, setEmailVerified] = useState(false);
   const [captchaVerified, setCaptchaVerified] = useState(false);
   const [formHasLocalData, setFormHasLocalData] = useState(false);
+  const [hasPreviousContribution, setHasPreviousContribution] = useState(false);
+  const [previousContributionAmount, setPreviousContributionAmount] =
+    useState(0);
+  const [showAlertDialog, setShowAlertDialog] = useState(false);
+  const [showMissionMessage, setShowMissionMessage] = useState(false);
+  const [alertDialogConfig, setAlertDialogConfig] = useState({
+    title: "",
+    message: "",
+    onConfirm: () => {},
+  });
 
-  const { submitRegistration } = useRegistration();
+  const { submitRegistration, calculateContribution } = useRegistration();
+  const { isPaymentProcessing, initiatePayment } = usePayment();
 
   // Steps in the registration form
   const steps = [
     "Verification",
     "Personal Info",
+    "Professional",
     "Event Attendance",
     "Financial",
   ];
@@ -72,7 +92,15 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
       whatsappNumber: "",
       country: "India",
       stateUT: "",
+      district: "",
+      bloodGroup: "",
       purpose: "",
+
+      // Professional
+      profession: "",
+      professionalDetails: "",
+      areaOfExpertise: "",
+      keySkills: "",
 
       // Event attendance
       isAttending: true,
@@ -80,15 +108,30 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
       totalVeg: 0,
       totalNonVeg: 0,
 
+      // Attendees structure
+      attendees: {
+        adults: { veg: 0, nonVeg: 0 },
+        teens: { veg: 0, nonVeg: 0 },
+        children: { veg: 0, nonVeg: 0 },
+        toddlers: { veg: 0, nonVeg: 0 },
+      },
+      eventContribution: [],
+      contributionDetails: "",
+
       // Financial
       willContribute: false,
       contributionAmount: 0,
       proposedAmount: 0,
+      paymentStatus: "Pending",
+      paymentId: "",
+      paymentDetails: "",
+      paymentRemarks: "",
     },
   });
 
   // Watch specific fields for conditional rendering
   const email = watch("email");
+  const profession = watch("profession");
   const isAttending = watch("isAttending");
   const willContribute = watch("willContribute");
 
@@ -139,6 +182,87 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
     setValue("captchaVerified", captchaVerified);
   }, [emailVerified, captchaVerified, setValue]);
 
+  // Show mission message when entering financial step
+  useEffect(() => {
+    if (currentStep === 4) {
+      setShowMissionMessage(true);
+    }
+  }, [currentStep]);
+
+  // Handle payment processing
+  const handlePayment = async () => {
+    try {
+      const contributionAmount = watch("contributionAmount") || 0;
+
+      // Skip expense comparison for additional contributions
+      if (!hasPreviousContribution) {
+        const attendees = watch("attendees");
+        const adultCount =
+          (attendees?.adults?.veg || 0) + (attendees?.adults?.nonVeg || 0);
+        const teenCount =
+          (attendees?.teens?.veg || 0) + (attendees?.teens?.nonVeg || 0);
+        const childCount =
+          (attendees?.children?.veg || 0) + (attendees?.children?.nonVeg || 0);
+
+        const totalExpense =
+          adultCount * 500 + teenCount * 250 + childCount * 150;
+
+        if (
+          isAttending &&
+          contributionAmount > 0 &&
+          contributionAmount < totalExpense
+        ) {
+          setAlertDialogConfig({
+            title: "Contribution Amount Warning",
+            message: `Your contribution (₹${contributionAmount}) is less than the estimated expenses (₹${totalExpense}) for your group. Would you like to add more to the current amount?`,
+            onConfirm: () => proceedWithPayment(contributionAmount),
+          });
+          setShowAlertDialog(true);
+          return;
+        }
+      }
+
+      await proceedWithPayment(contributionAmount);
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast.error("Payment failed. Please try again.");
+    }
+  };
+
+  const proceedWithPayment = async (contributionAmount) => {
+    await initiatePayment({
+      amount: contributionAmount,
+      name: watch("name"),
+      email: watch("email"),
+      contact: watch("contactNumber"),
+      notes: {
+        registrationType: "Other",
+        isAttending: isAttending ? "Yes" : "No",
+      },
+      onSuccess: (response) => {
+        setValue("paymentStatus", "Completed");
+        setValue("paymentId", response.razorpay_payment_id);
+        setValue(
+          "paymentDetails",
+          `Payment processed via Razorpay (ID: ${response.razorpay_payment_id})`
+        );
+        setValue("willContribute", true);
+        setHasPreviousContribution(true);
+        setPreviousContributionAmount(contributionAmount);
+
+        // Show simple success toast instead of alert dialog
+        toast.success(
+          "Payment successful! You can now submit your registration."
+        );
+      },
+      onFailure: (error) => {
+        console.error("Payment failed:", error);
+        setValue("paymentStatus", "Failed");
+        toast.error("Payment failed. Please try again.");
+      },
+    });
+  };
+
   // Email verification handler
   const handleEmailVerified = (status) => {
     setEmailVerified(status);
@@ -175,20 +299,52 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
       if (watch("country") === "India") {
         fieldsToValidate.push("stateUT");
       }
+
+      if (watch("stateUT") === "Kerala") {
+        fieldsToValidate.push("district");
+      }
     } else if (currentStep === 2) {
+      // Professional info
+      fieldsToValidate = ["profession"];
+
+      if (profession && profession !== "Student") {
+        fieldsToValidate.push("professionalDetails");
+      }
+
+      fieldsToValidate.push("areaOfExpertise", "keySkills");
+    } else if (currentStep === 3) {
       // Event attendance
       fieldsToValidate = ["isAttending"];
 
       if (isAttending) {
-        fieldsToValidate.push("foodPreference", "totalVeg", "totalNonVeg");
-      }
-    } else if (currentStep === 3) {
-      // Financial contribution
-      fieldsToValidate = ["willContribute"];
+        const attendees = watch("attendees");
+        const totalAttendees =
+          (attendees.adults.veg || 0) +
+          (attendees.adults.nonVeg || 0) +
+          (attendees.teens.veg || 0) +
+          (attendees.teens.nonVeg || 0) +
+          (attendees.children.veg || 0) +
+          (attendees.children.nonVeg || 0) +
+          (attendees.toddlers.veg || 0) +
+          (attendees.toddlers.nonVeg || 0);
 
-      if (willContribute) {
-        fieldsToValidate.push("contributionAmount");
+        if (totalAttendees === 0) {
+          toast.error("Please add at least one attendee");
+          return false;
+        }
+
+        fieldsToValidate.push("attendees");
       }
+    } else if (currentStep === 4) {
+      // Financial contribution
+      if (!hasPreviousContribution) {
+        const contributionAmount = watch("contributionAmount");
+        if (!contributionAmount || contributionAmount <= 0) {
+          toast.error("Please enter a contribution amount");
+          return false;
+        }
+      }
+      return true;
     }
 
     // Trigger validation for the current step's fields
@@ -216,9 +372,33 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
     setIsSubmitting(true);
 
     try {
+      // Check if payment is completed
+      if (!hasPreviousContribution) {
+        toast.error("Please complete your payment before submitting");
+        setIsSubmitting(false);
+        return;
+      }
+
       // Calculate proposed contribution based on attendance
       if (data.isAttending) {
-        data.proposedAmount = data.totalVeg * 500 + data.totalNonVeg * 500;
+        const attendees = data.attendees;
+        const adultCount =
+          (attendees?.adults?.veg || 0) + (attendees?.adults?.nonVeg || 0);
+        const teenCount =
+          (attendees?.teens?.veg || 0) + (attendees?.teens?.nonVeg || 0);
+        const childCount =
+          (attendees?.children?.veg || 0) + (attendees?.children?.nonVeg || 0);
+
+        // Calculate proposed amount based on age groups
+        data.proposedAmount =
+          adultCount * 500 + teenCount * 250 + childCount * 150;
+      }
+
+      // Add payment details to the data
+      data.willContribute = true;
+      data.paymentStatus = "Completed";
+      if (!data.paymentDetails) {
+        data.paymentDetails = `Payment of ₹${previousContributionAmount} received`;
       }
 
       // Submit registration
@@ -230,7 +410,13 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
 
       toast.success("Registration submitted successfully!");
       navigate("/registration-success", {
-        state: { registrationId: result.registrationId },
+        state: {
+          registrationId: result.registrationId,
+          registrationData: {
+            name: data.name,
+            contributionAmount: previousContributionAmount,
+          },
+        },
       });
     } catch (error) {
       console.error("Registration error:", error);
@@ -272,7 +458,7 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
         {/* Verification Step */}
         {currentStep === 0 && (
           <>
-            <FormSection title="Email Verification">
+            <FormSection title="Contact Verification">
               <FormField
                 label="Email Address"
                 name="email"
@@ -282,12 +468,93 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
                 required={true}
                 disabled={emailVerified}
               />
-
-              {email && email.includes("@") && (
-                <OtpInput onVerify={handleEmailVerified} email={email} />
+              <PhoneInput
+                country={"in"}
+                value={watch("contactNumber")}
+                onChange={(value) => setValue("contactNumber", value)}
+                inputProps={{
+                  name: "contactNumber",
+                  required: true,
+                  className: `w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    errors.contactNumber ? "border-red-500" : "border-gray-300"
+                  }`,
+                }}
+                containerClass="phone-input"
+                buttonClass="border-gray-300"
+                dropdownClass="country-dropdown"
+                searchClass="country-search"
+                searchPlaceholder="Search country..."
+                enableSearch={true}
+                disableSearchIcon={false}
+                searchNotFound="No country found"
+                specialLabel=""
+                enableLongNumbers={true}
+                countryCodeEditable={false}
+                disabled={emailVerified}
+                preferredCountries={["in", "us", "gb", "ae"]}
+              />
+              {errors.contactNumber && (
+                <p className="mt-1 text-sm text-red-600">
+                  {errors.contactNumber.message}
+                </p>
               )}
 
-              <CaptchaVerification onVerify={handleCaptchaVerified} />
+              {!emailVerified &&
+                email &&
+                email.includes("@") &&
+                watch("contactNumber") && (
+                  <OtpInput
+                    onVerify={handleEmailVerified}
+                    email={email}
+                    phone={watch("contactNumber")}
+                  />
+                )}
+
+              {emailVerified && (
+                <div className="flex items-center gap-2 mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <svg
+                    className="h-6 w-6 text-green-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <span className="text-green-800 font-medium">
+                    Email & Phone Verified
+                  </span>
+                </div>
+              )}
+
+              {!captchaVerified && (
+                <CaptchaVerification onVerify={handleCaptchaVerified} />
+              )}
+
+              {captchaVerified && (
+                <div className="flex items-center gap-2 mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <svg
+                    className="h-6 w-6 text-green-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <span className="text-green-800 font-medium">
+                    CAPTCHA Verified
+                  </span>
+                </div>
+              )}
             </FormSection>
           </>
         )}
@@ -374,6 +641,35 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
             </div>
 
             <FormField
+              label="Blood Group (for emergencies)"
+              name="bloodGroup"
+              type="select"
+              control={control}
+              errors={errors}
+              options={[
+                { value: "", label: "Select blood group" },
+                { value: "A+", label: "A+" },
+                { value: "A-", label: "A-" },
+                { value: "B+", label: "B+" },
+                { value: "B-", label: "B-" },
+                { value: "AB+", label: "AB+" },
+                { value: "AB-", label: "AB-" },
+                { value: "O+", label: "O+" },
+                { value: "O-", label: "O-" },
+              ]}
+            />
+
+            <FormField
+              label="Purpose of Registration"
+              name="purpose"
+              type="textarea"
+              control={control}
+              errors={errors}
+              required={true}
+              placeholder="Please explain why you are registering for this event"
+            />
+
+            <FormField
               label="Country"
               name="country"
               type="select"
@@ -399,91 +695,335 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
                 options={indianStatesOptions}
               />
             )}
+
+            {watch("stateUT") === "Kerala" && (
+              <FormField
+                label="District"
+                name="district"
+                type="select"
+                control={control}
+                errors={errors}
+                required={true}
+                options={KERALA_DISTRICTS}
+                placeholder="Select your district"
+              />
+            )}
+          </FormSection>
+        )}
+
+        {/* Professional Information Step */}
+        {currentStep === 2 && (
+          <FormSection title="Professional Information">
+            <FormField
+              label="Current Profession"
+              name="profession"
+              type="select"
+              control={control}
+              errors={errors}
+              options={PROFESSION_OPTIONS}
+              placeholder="Select your profession"
+            />
+
+            {profession && profession !== "Student" && (
+              <FormField
+                label="Professional Details"
+                name="professionalDetails"
+                type="textarea"
+                control={control}
+                errors={errors}
+                placeholder="Please provide details about your profession, role, and experience"
+              />
+            )}
+
+            <FormField
+              label="Area of Expertise"
+              name="areaOfExpertise"
+              type="text"
+              control={control}
+              errors={errors}
+              placeholder="e.g., Engineering, Medicine, Finance, etc."
+            />
+
+            <FormField
+              label="Key Skills"
+              name="keySkills"
+              type="textarea"
+              control={control}
+              errors={errors}
+              placeholder="Please list your key professional skills"
+            />
           </FormSection>
         )}
 
         {/* Event Attendance Step */}
-        {currentStep === 2 && (
+        {currentStep === 3 && (
           <FormSection title="Event Attendance">
-            <FormField
-              label="Will you attend the UNMA 2025 event?"
-              name="isAttending"
-              type="checkbox"
-              control={control}
-              errors={errors}
-              required={true}
-            />
+            <div className="space-y-6">
+              <FormField
+                label="Will you attend the event?"
+                name="isAttending"
+                type="checkbox"
+                control={control}
+                errors={errors}
+              />
 
-            {isAttending && (
-              <>
-                <FormField
-                  label="Food Preference"
-                  name="foodPreference"
-                  type="select"
-                  control={control}
-                  errors={errors}
-                  required={true}
-                  options={[
-                    { value: "vegetarian", label: "Vegetarian" },
-                    { value: "non-vegetarian", label: "Non-Vegetarian" },
-                    { value: "both", label: "Both" },
-                  ]}
-                />
+              {isAttending && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="space-y-6">
+                    <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                      <p className="text-sm text-gray-600">
+                        Please indicate the number of attendees in each age
+                        group and their food preferences. This will help us plan
+                        the seating and catering arrangements accordingly.
+                      </p>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    label="Number of Vegetarian Meals"
-                    name="totalVeg"
-                    type="number"
-                    control={control}
-                    errors={errors}
-                    required={true}
-                    min={0}
-                  />
+                    <AttendeeCounter
+                      values={
+                        watch("attendees") || {
+                          adults: { veg: 0, nonVeg: 0 },
+                          teens: { veg: 0, nonVeg: 0 },
+                          children: { veg: 0, nonVeg: 0 },
+                          toddlers: { veg: 0, nonVeg: 0 },
+                        }
+                      }
+                      onChange={(newValues) => {
+                        setValue("attendees", newValues, {
+                          shouldValidate: true,
+                        });
+                      }}
+                    />
 
-                  <FormField
-                    label="Number of Non-Vegetarian Meals"
-                    name="totalNonVeg"
-                    type="number"
-                    control={control}
-                    errors={errors}
-                    required={true}
-                    min={0}
-                  />
-                </div>
-              </>
-            )}
+                    <div className="space-y-4 mt-8">
+                      <FormField
+                        label="How would you like to contribute to the event?"
+                        name="eventContribution"
+                        type="multiselect"
+                        control={control}
+                        errors={errors}
+                        options={[
+                          { value: "organize", label: "Help organize" },
+                          { value: "volunteer", label: "Volunteer" },
+                          { value: "sponsor", label: "Sponsor" },
+                          { value: "perform", label: "Perform" },
+                          { value: "speak", label: "Speak" },
+                          { value: "other", label: "Other" },
+                        ]}
+                      />
+
+                      <FormField
+                        label="Additional contribution details"
+                        name="contributionDetails"
+                        type="textarea"
+                        control={control}
+                        errors={errors}
+                        placeholder="Please provide details about how you would like to contribute"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </div>
           </FormSection>
         )}
 
         {/* Financial Contribution Step */}
-        {currentStep === 3 && (
+        {currentStep === 4 && (
           <FormSection title="Financial Contribution">
-            <p className="text-gray-600 mb-4">
-              The estimated cost per person for the event is ₹500. Your
-              contribution helps make this event successful.
-            </p>
+            <div className="space-y-6">
+              {hasPreviousContribution && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                  <div className="flex items-center">
+                    <svg
+                      className="h-5 w-5 text-green-400 mr-2"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    <p className="text-green-800">
+                      Previous contribution of ₹{previousContributionAmount} was
+                      successful
+                    </p>
+                  </div>
+                </div>
+              )}
 
-            <FormField
-              label="Would you like to make a financial contribution?"
-              name="willContribute"
-              type="checkbox"
-              control={control}
-              errors={errors}
-              required={true}
-            />
-
-            {willContribute && (
               <FormField
-                label="Contribution Amount (in ₹)"
+                label={`${
+                  hasPreviousContribution ? "Additional " : ""
+                }Contribution Amount (in ₹)`}
                 name="contributionAmount"
                 type="number"
                 control={control}
                 errors={errors}
-                required={true}
-                min={100}
+                required={!hasPreviousContribution}
+                min={1}
+                valueAsNumber={true}
               />
-            )}
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center gap-4"
+              >
+                {watch("contributionAmount") > 0 && (
+                  <button
+                    type="button"
+                    onClick={handlePayment}
+                    disabled={isPaymentProcessing}
+                    className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isPaymentProcessing ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          className="-ml-1 mr-3 h-5 w-5"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+                          />
+                        </svg>
+                        {hasPreviousContribution
+                          ? "Contribute More"
+                          : "Proceed to Pay"}{" "}
+                        ₹{watch("contributionAmount")}
+                      </>
+                    )}
+                  </button>
+                )}
+              </motion.div>
+
+              {/* Submit Registration Button */}
+              <div className="mt-8 flex justify-center">
+                <button
+                  type="button"
+                  onClick={handleSubmitForm}
+                  disabled={isSubmitting || !hasPreviousContribution}
+                  className="inline-flex items-center px-8 py-4 border border-transparent text-lg font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg
+                        className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Submitting Registration...
+                    </>
+                  ) : (
+                    <>🎉 Submit Registration 🎊</>
+                  )}
+                </button>
+              </div>
+
+              {!hasPreviousContribution && (
+                <div className="mt-4 text-center text-sm text-red-600">
+                  Please complete your contribution payment before submitting
+                  registration
+                </div>
+              )}
+            </div>
+
+            {/* Mission Message Popup */}
+            <AlertDialog
+              isOpen={showMissionMessage}
+              onClose={() => setShowMissionMessage(false)}
+              onConfirm={() => setShowMissionMessage(false)}
+              title="Support UNMA's Mission"
+              message={
+                <div className="space-y-4">
+                  <p className="text-lg">
+                    This event is more than just a gathering - it's a fundraiser
+                    for UNMA's future activities and emergency support
+                    initiatives.
+                  </p>
+                  <p>
+                    Your contribution will directly impact our community. We're
+                    currently supporting alumni from Wayanad and Kozhikode who
+                    lost everything in the 2024 landslides.
+                  </p>
+                  <p className="font-medium text-lg">
+                    UNMA alumni stand together 24/7, supporting each other
+                    through thick and thin. Your generosity strengthens this
+                    support system.
+                  </p>
+                </div>
+              }
+              confirmText="I Understand"
+              singleButton={true}
+              type="info"
+            />
+
+            {/* Contribution Warning Dialog */}
+            <AlertDialog
+              isOpen={showAlertDialog}
+              onClose={() => setShowAlertDialog(false)}
+              onConfirm={() => {
+                alertDialogConfig.onConfirm();
+                setShowAlertDialog(false);
+              }}
+              title={alertDialogConfig.title}
+              message={alertDialogConfig.message}
+              confirmText="Proceed with current amount"
+              cancelText="Add more amount"
+              type="warning"
+            />
           </FormSection>
         )}
 
@@ -501,8 +1041,10 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
           }
           isSubmitting={isSubmitting}
           isNextDisabled={
-            currentStep === 0 && (!emailVerified || !captchaVerified)
+            (currentStep === 0 && (!emailVerified || !captchaVerified)) ||
+            currentStep === 4 // Disable next button on financial step
           }
+          nextButtonText={currentStep === 4 ? "Finish" : "Next"}
         />
 
         <div className="mt-6 text-center">

@@ -37,83 +37,140 @@ const Header = () => {
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? "bg-white shadow-md py-2"
-          : "bg-white/90 py-4 border-b border-gray-200"
+          ? "bg-white shadow-md py-3"
+          : "bg-white py-4 border-b border-gray-200"
       }`}
     >
-      <div className="container flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="flex items-center">
-          <img
-            src="/logo.png"
-            alt="UNMA 2025"
-            className="h-10 w-auto"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src =
-                "https://media.licdn.com/dms/image/v2/C4E0BAQHBiErpz5o1lQ/company-logo_200_200/company-logo_200_200/0/1631331050086?e=2147483647&v=beta&t=4nyvBmOtfitoTakRa43Jj5aP37obR-FqNF80JBm2VQk";
-            }}
-          />
-          {/* <span className="ml-2 text-xl font-bold text-primary">UNMA 2025</span> */}
-        </Link>
+      <div className="container mx-auto px-4 grid grid-cols-3 items-center">
+        {/* Logo - Left */}
+        <div className="flex items-center">
+          <Link to="/" className="flex items-center">
+            <img
+              src="/logo.png"
+              alt="UNMA 2025"
+              className="h-10 w-auto"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src =
+                  "https://media.licdn.com/dms/image/v2/C4E0BAQHBiErpz5o1lQ/company-logo_200_200/company-logo_200_200/0/1631331050086?e=2147483647&v=beta&t=4nyvBmOtfitoTakRa43Jj5aP37obR-FqNF80JBm2VQk";
+              }}
+            />
+            {/* <span className="ml-2 text-xl font-bold text-primary">UNMA 2025</span> */}
+          </Link>
+        </div>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center space-x-8">
+        {/* Desktop Navigation - Center */}
+        <nav className="hidden md:flex items-center justify-center">
+          <div className="flex space-x-1 items-center">
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                `px-3 py-2 my-1 rounded-lg transition-all duration-200 relative ${
+                  isActive
+                    ? "text-primary font-medium"
+                    : "text-gray-600 hover:text-primary hover:bg-gray-50"
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  Home
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded"></span>
+                  )}
+                </>
+              )}
+            </NavLink>
+
+            <NavLink
+              to="/registration"
+              className={({ isActive }) =>
+                `px-3 py-2 my-1 rounded-lg transition-all duration-200 relative ${
+                  isActive
+                    ? "text-primary font-medium"
+                    : "text-gray-600 hover:text-primary hover:bg-gray-50"
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  Register
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded"></span>
+                  )}
+                </>
+              )}
+            </NavLink>
+
+            <ScrollLink
+              to="/#faq"
+              className="px-3 py-2 my-1 rounded-lg text-gray-600 hover:text-primary hover:bg-gray-50 transition-all duration-200"
+            >
+              FAQ
+            </ScrollLink>
+
+            <NavLink
+              to="/contact"
+              className={({ isActive }) =>
+                `px-3 py-2 my-1 rounded-lg transition-all duration-200 relative ${
+                  isActive
+                    ? "text-primary font-medium"
+                    : "text-gray-600 hover:text-primary hover:bg-gray-50"
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  Contact
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded"></span>
+                  )}
+                </>
+              )}
+            </NavLink>
+
+            <NavLink
+              to="/report-issue"
+              className={({ isActive }) =>
+                `px-3 py-2 my-1 rounded-lg transition-all duration-200 relative whitespace-nowrap ${
+                  isActive
+                    ? "text-primary font-medium"
+                    : "text-gray-600 hover:text-primary hover:bg-gray-50"
+                }`
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  Report Issue
+                  {isActive && (
+                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-primary rounded"></span>
+                  )}
+                </>
+              )}
+            </NavLink>
+          </div>
+        </nav>
+
+        {/* Admin Login - Right */}
+        <div className="hidden md:flex justify-end">
           <NavLink
-            to="/"
+            to="/admin/login"
             className={({ isActive }) =>
-              `text-base font-medium hover:text-primary transition-colors ${
-                isActive ? "text-primary" : "text-gray-600"
+              `px-4 py-2 rounded-md border transition-all duration-300 ${
+                isActive
+                  ? "bg-blue-50 text-blue-600 border-blue-200"
+                  : "border-blue-300 text-blue-600 hover:bg-blue-600 hover:text-white"
               }`
             }
           >
-            Home
-          </NavLink>
-          <NavLink
-            to="/registration"
-            className={({ isActive }) =>
-              `text-base font-medium hover:text-primary transition-colors ${
-                isActive ? "text-primary" : "text-gray-600"
-              }`
-            }
-          >
-            Register
-          </NavLink>
-          <ScrollLink
-            to="/#faq"
-            className="text-base font-medium text-gray-600 hover:text-primary transition-colors"
-          >
-            FAQ
-          </ScrollLink>
-          <NavLink
-            to="/contact"
-            className={({ isActive }) =>
-              `text-base font-medium hover:text-primary transition-colors ${
-                isActive ? "text-primary" : "text-gray-600"
-              }`
-            }
-          >
-            Contact
-          </NavLink>
-          <NavLink
-            to="/report-issue"
-            className={({ isActive }) =>
-              `text-base font-medium hover:text-primary transition-colors ${
-                isActive ? "text-primary" : "text-gray-600"
-              }`
-            }
-          >
-            Report Issue
-          </NavLink>
-          <NavLink to="/admin/login" className="btn btn-outline py-2 px-4">
             Admin Login
           </NavLink>
-        </nav>
+        </div>
 
         {/* Mobile Menu Button */}
         <button
           onClick={toggleMenu}
-          className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 md:hidden"
+          className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 md:hidden ml-auto col-span-2 md:col-span-1"
         >
           <span className="sr-only">Open main menu</span>
           {isMenuOpen ? (
@@ -127,74 +184,85 @@ const Header = () => {
       {/* Mobile Menu */}
       {isMenuOpen && (
         <div className="md:hidden">
-          <div className="px-2 pt-2 pb-3 space-y-1 bg-white shadow-lg">
-            <NavLink
-              to="/"
-              onClick={closeMenu}
-              className={({ isActive }) =>
-                `block px-3 py-2 rounded-md text-base font-medium ${
-                  isActive
-                    ? "text-primary bg-gray-50"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-primary"
-                }`
-              }
-            >
-              Home
-            </NavLink>
-            <NavLink
-              to="/registration"
-              onClick={closeMenu}
-              className={({ isActive }) =>
-                `block px-3 py-2 rounded-md text-base font-medium ${
-                  isActive
-                    ? "text-primary bg-gray-50"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-primary"
-                }`
-              }
-            >
-              Register
-            </NavLink>
-            <div
-              onClick={closeMenu}
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-primary"
-            >
-              <ScrollLink to="/#faq" className="w-full inline-block">
-                FAQ
-              </ScrollLink>
+          <div className="px-4 py-2 space-y-1 bg-white shadow-lg rounded-b-lg divide-y divide-gray-100">
+            <div className="py-2">
+              <NavLink
+                to="/"
+                onClick={closeMenu}
+                className={({ isActive }) =>
+                  `block px-4 py-2 rounded-md text-base ${
+                    isActive
+                      ? "text-primary font-medium bg-blue-50"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+                  }`
+                }
+              >
+                Home
+              </NavLink>
+              <NavLink
+                to="/registration"
+                onClick={closeMenu}
+                className={({ isActive }) =>
+                  `block px-4 py-2 rounded-md text-base ${
+                    isActive
+                      ? "text-primary font-medium bg-blue-50"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+                  }`
+                }
+              >
+                Register
+              </NavLink>
             </div>
-            <NavLink
-              to="/contact"
-              onClick={closeMenu}
-              className={({ isActive }) =>
-                `block px-3 py-2 rounded-md text-base font-medium ${
-                  isActive
-                    ? "text-primary bg-gray-50"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-primary"
-                }`
-              }
-            >
-              Contact
-            </NavLink>
-            <NavLink
-              to="/report-issue"
-              onClick={closeMenu}
-              className={({ isActive }) =>
-                `block px-3 py-2 rounded-md text-base font-medium ${
-                  isActive
-                    ? "text-primary bg-gray-50"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-primary"
-                }`
-              }
-            >
-              Report Issue
-            </NavLink>
-            <NavLink
-              to="/admin/login"
-              onClick={closeMenu}
-              className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-primary"
-            >
-              Admin Login
-            </NavLink>
+
+            <div className="py-2">
+              <div
+                onClick={closeMenu}
+                className="block px-4 py-2 rounded-md text-base text-gray-600 hover:bg-gray-50 hover:text-primary"
+              >
+                <ScrollLink to="/#faq" className="w-full inline-block">
+                  FAQ
+                </ScrollLink>
+              </div>
+              <NavLink
+                to="/contact"
+                onClick={closeMenu}
+                className={({ isActive }) =>
+                  `block px-4 py-2 rounded-md text-base ${
+                    isActive
+                      ? "text-primary font-medium bg-blue-50"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+                  }`
+                }
+              >
+                Contact
+              </NavLink>
+            </div>
+
+            <div className="py-2">
+              <NavLink
+                to="/report-issue"
+                onClick={closeMenu}
+                className={({ isActive }) =>
+                  `block px-4 py-2 rounded-md text-base whitespace-nowrap ${
+                    isActive
+                      ? "text-primary font-medium bg-blue-50"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-primary"
+                  }`
+                }
+              >
+                Report Issue
+              </NavLink>
+            </div>
+
+            <div className="py-2">
+              <NavLink
+                to="/admin/login"
+                onClick={closeMenu}
+                className="block px-4 py-2 rounded-md text-base font-medium text-blue-600 hover:bg-blue-50"
+              >
+                Admin Login
+              </NavLink>
+            </div>
           </div>
         </div>
       )}

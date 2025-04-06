@@ -530,6 +530,52 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         {/* Verification Step */}
         {currentStep === 0 && (
           <>
+            {/* Special schools information box */}
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-300 rounded-lg shadow-sm">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-6 w-6 text-amber-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-amber-800">
+                    Important Notice for Alumni of Specific Schools
+                  </h3>
+                  <div className="mt-2 text-sm text-amber-700">
+                    <p>
+                      Alumni of{" "}
+                      <strong>
+                        JNV Malappuram, JNV Alappuzha, and JNV Thrissur
+                      </strong>{" "}
+                      have two options:
+                    </p>
+                    <ul className="list-disc list-inside mt-2 ml-2 space-y-1">
+                      <li>
+                        Contact your respective school alumni committee for
+                        event registration, OR
+                      </li>
+                      <li>
+                        Register through this form by selecting "Other School"
+                        in the Personal Information step
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <FormSection title="Contact Verification">
               <FormField
                 label="Email Address"
@@ -1343,7 +1389,8 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 { value: "not-required", label: "I don't need accommodation" },
                 {
                   value: "need",
-                  label: "I can share accommodation with fellow navodayans",
+                  label:
+                    "I'm open to joining someone for shared accommodation.",
                 },
                 {
                   value: "provide",
@@ -1795,7 +1842,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         />
 
         {/* Hide navigation buttons on final step */}
-        {currentStep < 8 && (
+        {currentStep < 9 && (
           <NavigationButtons
             currentStep={currentStep}
             stepsCount={steps.length}
@@ -1804,10 +1851,11 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
             onSkip={handleSkipOptional}
             isSubmitting={isSubmitting}
             isNextDisabled={
-              currentStep === 0 &&
-              (!emailVerified || !captchaVerified || !quizCompleted)
+              (currentStep === 0 &&
+                (!emailVerified || !captchaVerified || !quizCompleted)) ||
+              currentStep === 8
             }
-            nextButtonText="Next"
+            nextButtonText={currentStep === 8 ? "Finish" : "Next"}
             showSkipButton={currentStep === 7}
           />
         )}
