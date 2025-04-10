@@ -218,7 +218,7 @@ const Home = () => {
                 >
                   <span className="text-yellow-400 text-xl">★</span>
                   <span className="text-white font-bold tracking-wider">
-                    JNV KERALA ALUMNI MEET
+                    United Navodayan Malayalee Association UNMA Meet
                   </span>
                   <span className="text-yellow-400 text-xl">★</span>
                 </motion.div>
