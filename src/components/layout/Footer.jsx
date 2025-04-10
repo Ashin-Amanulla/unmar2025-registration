@@ -164,7 +164,7 @@ const Footer = () => {
 
         {/* Copyright */}
         <div className="pt-6 border-t border-gray-700 text-center text-gray-400">
-          <p>© {currentYear} UNMA 2025. All rights reserved.</p>
+          <p>© {currentYear} United Navodayan Malayalee Association UNMA . All rights reserved.</p>
         </div>
       </div>
     </footer>
