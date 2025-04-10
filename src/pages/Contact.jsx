@@ -240,7 +240,7 @@ const Contact = () => {
                         Our Address
                       </h3>
                       <p className="text-gray-600 mt-1">
-                        First Floor Panathra Blog , Naer High Court of Kerala ,
+                        First Floor Panathra Blog , Near High Court of Kerala ,
                         Kochi - 682018
                       </p>
                     </div>
@@ -259,7 +259,7 @@ const Contact = () => {
                           href="tel:+919876543210"
                           className="hover:text-primary"
                         >
-                          +91 971 507425588
+                          +91 7012394747
                         </a>
                       </p>
                       <p className="text-gray-500 text-sm">Available 24 * 7</p>
