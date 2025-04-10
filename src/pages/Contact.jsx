@@ -240,6 +240,7 @@ const Contact = () => {
                         Our Address
                       </h3>
                       <p className="text-gray-600 mt-1">
+                        United Navodayan Malayalee Association UNMA,
                         First Floor Panathra Blog , Near High Court of Kerala ,
                         Kochi - 682018
                       </p>
