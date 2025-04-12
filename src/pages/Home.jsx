@@ -296,7 +296,7 @@ const Home = () => {
                   <div>
                     <h3 className="text-white text-lg font-semibold">Where</h3>
                     <p className="text-white text-xl font-bold">
-                      Airport Convention Center
+                      CIAL Convention Center
                     </p>
                     <p className="text-white/80">Kochi, Kerala</p>
                   </div>
@@ -347,7 +347,7 @@ const Home = () => {
                     </span>
                   </div>
                   <a
-                    href="https://goo.gl/maps/YOUR_GOOGLE_MAPS_LINK"
+                    href="https://g.co/kgs/rvWmCBK"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-all duration-300 text-sm"
@@ -760,7 +760,7 @@ const Home = () => {
                 {
                   question: "Is there a registration fee?",
                   answer:
-                    "The basic registration is free. However, there are optional sponsership and financial contribution options if you wish to contribute to the event.",
+                    "There is a registration fee based on head count",
                 },
                 {
                   question:
