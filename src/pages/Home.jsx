@@ -277,7 +277,7 @@ const Home = () => {
                   <div>
                     <h3 className="text-white text-lg font-semibold">When</h3>
                     <p className="text-white text-xl font-bold">
-                      August 15, 2025
+                      August 30, 2025
                     </p>
                     <p className="text-white/80">9:00 AM - 5:00 PM</p>
                   </div>
@@ -564,7 +564,7 @@ const Home = () => {
                         <CalendarIcon className="w-10 h-10 text-white" />
                       </div>
                       <h3 className="text-3xl font-bold text-white mb-2">
-                        August 15, 2025
+                        August 30, 2025
                       </h3>
                       <p className="text-white/90 text-xl">9:00 AM - 5:00 PM</p>
                       <div className="mt-8 flex justify-center">
@@ -643,12 +643,9 @@ const Home = () => {
                             Registration
                           </h4>
                           <p className="text-gray-800 font-medium">
-                            Free entry
+                            A nominal amount of Registration fee will be charged based on head count.
                           </p>
-                          <p className="text-gray-600">
-                            Optional donation available to support UNMA
-                            activities
-                          </p>
+                      
                         </div>
                       </div>
                     </div>

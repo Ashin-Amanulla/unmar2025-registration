@@ -33,7 +33,16 @@ const paymentApi = {
             console.error('Payment verification failed:', error);
             throw error.response?.data || { message: 'Payment verification failed' };
         }
-    }
+    },
+    createOrderRedirect: async (data) => {
+        const res = await axios.post('/payment/redirect-flow/create-order', data);
+        return res.data;
+      },
+    
+      createOrderIntent: async (data) => {
+        const res = await axios.post('/payment/seamless-flow/create-intent-url', data);
+        return res.data;
+      },
     
 };
 
