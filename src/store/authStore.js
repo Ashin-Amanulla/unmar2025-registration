@@ -23,7 +23,6 @@ const useAuthStore = create(
                 try {
                     const response = await authApi.login(credentials);
                     const { user, token } = response.data;
-                    console.log('response login', user);
 
                     if (!user || !token) {
                         throw new Error('Invalid response from server');

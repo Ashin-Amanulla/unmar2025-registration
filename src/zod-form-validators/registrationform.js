@@ -197,7 +197,7 @@ const StaffSchema = BaseRegistrationSchema.extend({
     contributionDetails: z.string().optional(),
 
     // Sponsorship
-    interestedInSponsorship: z.boolean().optional(),
+    interestedInSponsorship: z.boolean().optional().default(false),
     sponsorshipType: z.array(z.string()).optional(),
     sponsorshipDetails: z.string().optional(),
 
@@ -313,6 +313,32 @@ const OtherSchema = BaseRegistrationSchema.extend({
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(0).optional()
     ),
+    // Add attendees structure
+    attendees: z.object({
+        adults: z.object({
+            veg: z.number().int().min(0).default(0),
+            nonVeg: z.number().int().min(0).default(0),
+        }).default({ veg: 0, nonVeg: 0 }),
+        teens: z.object({
+            veg: z.number().int().min(0).default(0),
+            nonVeg: z.number().int().min(0).default(0),
+        }).default({ veg: 0, nonVeg: 0 }),
+        children: z.object({
+            veg: z.number().int().min(0).default(0),
+            nonVeg: z.number().int().min(0).default(0),
+        }).default({ veg: 0, nonVeg: 0 }),
+        toddlers: z.object({
+            veg: z.number().int().min(0).default(0),
+            nonVeg: z.number().int().min(0).default(0),
+        }).default({ veg: 0, nonVeg: 0 }),
+    }).default({
+        adults: { veg: 0, nonVeg: 0 },
+        teens: { veg: 0, nonVeg: 0 },
+        children: { veg: 0, nonVeg: 0 },
+        toddlers: { veg: 0, nonVeg: 0 },
+    }),
+    eventContribution: z.array(z.string()).optional(),
+    contributionDetails: z.string().optional(),
 
     // Transportation
     travellingFrom: z.string().optional(),
@@ -358,6 +384,24 @@ const OtherSchema = BaseRegistrationSchema.extend({
     {
         message: "Please specify contribution amount",
         path: ["contributionAmount"],
+    }
+).refine(
+    (data) => {
+        if (data.isAttending) {
+            const attendees = data.attendees;
+            const totalAttendees =
+                (attendees.adults.veg || 0) + (attendees.adults.nonVeg || 0) +
+                (attendees.teens.veg || 0) + (attendees.teens.nonVeg || 0) +
+                (attendees.children.veg || 0) + (attendees.children.nonVeg || 0) +
+                (attendees.toddlers.veg || 0) + (attendees.toddlers.nonVeg || 0);
+
+            return totalAttendees > 0;
+        }
+        return true;
+    },
+    {
+        message: "Please add at least one attendee",
+        path: ["attendees"],
     }
 );
 

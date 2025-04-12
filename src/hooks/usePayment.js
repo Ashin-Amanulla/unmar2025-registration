@@ -17,8 +17,11 @@ export const usePayment = () => {
         try {
             setIsPaymentProcessing(true);
 
+            console.log(amount, "amount");
             // Create order through API
             const res = await paymentApi.createOrder({ amount });
+         
+         console.log('res',res);
             const { id, amount: orderAmount, currency } = res;
 
             const options = {

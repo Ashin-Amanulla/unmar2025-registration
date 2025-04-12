@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAdmin } from "../../hooks/useAdmin";
 import useAuthStore from "../../store/authStore";
 import {
@@ -6,10 +7,13 @@ import {
   TrashIcon,
   MagnifyingGlassIcon,
   FunnelIcon,
+  EyeIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { format } from "date-fns";
 
 const Registrations = () => {
+  const navigate = useNavigate();
   const [filters, setFilters] = useState({
     search: "",
     status: "all",
@@ -17,6 +21,8 @@ const Registrations = () => {
     page: 1,
     limit: 10,
   });
+  const [selectedRegistration, setSelectedRegistration] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
   const { useRegistrations, deleteRegistration } = useAdmin();
   const { data, isLoading, error } = useRegistrations(filters);
@@ -50,6 +56,16 @@ const Registrations = () => {
     if (window.confirm("Are you sure you want to delete this registration?")) {
       await deleteRegistration(id);
     }
+  };
+
+  const handleView = (registration) => {
+    setSelectedRegistration(registration);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedRegistration(null);
   };
 
   if (!isAuthenticated) return null;
@@ -172,14 +188,14 @@ const Registrations = () => {
                     Error loading registrations
                   </td>
                 </tr>
-              ) : data?.registrations?.length === 0 ? (
+              ) : data?.data?.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="px-6 py-4 text-center">
                     No registrations found
                   </td>
                 </tr>
               ) : (
-                data?.registrations?.map((registration) => (
+                data?.data?.map((registration) => (
                   <tr key={registration._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
@@ -206,13 +222,25 @@ const Registrations = () => {
                             : "bg-yellow-100 text-yellow-800"
                         }`}
                       >
-                        {registration.status}
+                        {registration.status || "pending"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(registration.createdAt), "MMM d, yyyy")}
+                      {registration.createdAt
+                        ? format(
+                            new Date(registration.createdAt),
+                            "MMM d, yyyy"
+                          )
+                        : "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleView(registration)}
+                        className="text-indigo-600 hover:text-indigo-900 mr-4"
+                        title="View details"
+                      >
+                        <EyeIcon className="h-5 w-5" />
+                      </button>
                       <button
                         onClick={() =>
                           navigate(
@@ -220,12 +248,14 @@ const Registrations = () => {
                           )
                         }
                         className="text-blue-600 hover:text-blue-900 mr-4"
+                        title="Edit registration"
                       >
                         <PencilIcon className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => handleDelete(registration._id)}
                         className="text-red-600 hover:text-red-900"
+                        title="Delete registration"
                       >
                         <TrashIcon className="h-5 w-5" />
                       </button>
@@ -295,6 +325,329 @@ const Registrations = () => {
           </div>
         )}
       </div>
+
+      {/* Detail Modal */}
+      {showModal && selectedRegistration && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+              onClick={closeModal}
+            ></div>
+
+            <span
+              className="hidden sm:inline-block sm:align-middle sm:h-screen"
+              aria-hidden="true"
+            >
+              &#8203;
+            </span>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+              <div className="flex justify-between items-center bg-blue-600 px-6 py-4">
+                <h3 className="text-xl leading-6 font-medium text-white">
+                  Registration Details
+                </h3>
+                <button
+                  onClick={closeModal}
+                  className="bg-blue-600 rounded-md text-white hover:text-gray-200 focus:outline-none"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="bg-white px-6 py-5 max-h-[80vh] overflow-y-auto">
+                <div className="mb-6">
+                  <div className="flex items-center mb-4">
+                    <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center mr-4">
+                      <span className="text-2xl text-blue-600 font-bold">
+                        {selectedRegistration.name
+                          ? selectedRegistration.name.charAt(0).toUpperCase()
+                          : "U"}
+                      </span>
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">
+                        {selectedRegistration.name}
+                      </h2>
+                      <p className="text-sm text-gray-500">
+                        {selectedRegistration.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3 mb-2">
+                    <span
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${
+                        selectedRegistration.status === "verified"
+                          ? "bg-green-100 text-green-800"
+                          : selectedRegistration.status === "rejected"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      Status: {selectedRegistration.status || "Pending"}
+                    </span>
+
+                    <span
+                      className={`px-3 py-1 text-sm font-medium rounded-full ${
+                        selectedRegistration.paymentStatus === "completed"
+                          ? "bg-green-100 text-green-800"
+                          : selectedRegistration.paymentStatus === "failed"
+                          ? "bg-red-100 text-red-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      Payment: {selectedRegistration.paymentStatus || "Pending"}
+                    </span>
+
+                    <span className="px-3 py-1 text-sm font-medium rounded-full bg-blue-100 text-blue-800">
+                      Type: {selectedRegistration.registrationType || "N/A"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Personal Information */}
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                      <h4 className="text-base font-semibold text-gray-800">
+                        Personal Information
+                      </h4>
+                    </div>
+                    <div className="divide-y divide-gray-200">
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          Contact Number
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900 font-medium">
+                          {selectedRegistration.contactNumber || "N/A"}
+                        </div>
+                      </div>
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          WhatsApp
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900">
+                          {selectedRegistration.whatsappNumber ||
+                            "Same as contact"}
+                        </div>
+                      </div>
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          Address
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900">
+                          {selectedRegistration.address || "Not provided"}
+                        </div>
+                      </div>
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          District
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900">
+                          {selectedRegistration.district || "N/A"}
+                        </div>
+                      </div>
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          Occupation
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900">
+                          {selectedRegistration.currentOccupation ||
+                            "Not provided"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* JNV Information */}
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                      <h4 className="text-base font-semibold text-gray-800">
+                        JNV Information
+                      </h4>
+                    </div>
+                    <div className="divide-y divide-gray-200">
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          School
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900">
+                          {selectedRegistration.jnvSchool || "N/A"}
+                        </div>
+                      </div>
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          Batch
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900">
+                          {selectedRegistration.batch || "N/A"}
+                        </div>
+                      </div>
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          House
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900">
+                          {selectedRegistration.house || "Not specified"}
+                        </div>
+                      </div>
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          Roll Number
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900">
+                          {selectedRegistration.rollNumber || "Not provided"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Event Information */}
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                      <h4 className="text-base font-semibold text-gray-800">
+                        Event Information
+                      </h4>
+                    </div>
+                    <div className="divide-y divide-gray-200">
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          Attending
+                        </div>
+                        <div className="w-2/3 text-sm">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              selectedRegistration.isAttending
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {selectedRegistration.isAttending ? "Yes" : "No"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          Will Contribute
+                        </div>
+                        <div className="w-2/3 text-sm">
+                          <span
+                            className={`px-2 py-1 rounded text-xs font-medium ${
+                              selectedRegistration.willContribute
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {selectedRegistration.willContribute ? "Yes" : "No"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          Contribution
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900 font-semibold">
+                          {selectedRegistration.contributionAmount
+                            ? `₹${selectedRegistration.contributionAmount}`
+                            : "N/A"}
+                        </div>
+                      </div>
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          Accommodation
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900">
+                          {selectedRegistration.accommodation ||
+                            "Not specified"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Information */}
+                  <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                      <h4 className="text-base font-semibold text-gray-800">
+                        Additional Information
+                      </h4>
+                    </div>
+                    <div className="divide-y divide-gray-200">
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          Registered On
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900">
+                          {selectedRegistration.createdAt
+                            ? format(
+                                new Date(selectedRegistration.createdAt),
+                                "PPp"
+                              )
+                            : "N/A"}
+                        </div>
+                      </div>
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          Last Updated
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900">
+                          {selectedRegistration.updatedAt
+                            ? format(
+                                new Date(selectedRegistration.updatedAt),
+                                "PPp"
+                              )
+                            : "N/A"}
+                        </div>
+                      </div>
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          Transaction ID
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900 font-mono text-xs">
+                          {selectedRegistration.transactionId ||
+                            "No transaction"}
+                        </div>
+                      </div>
+                      <div className="flex py-3 px-4">
+                        <div className="w-1/3 text-sm font-medium text-gray-500">
+                          Notes
+                        </div>
+                        <div className="w-2/3 text-sm text-gray-900">
+                          {selectedRegistration.notes || "No additional notes"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="mt-8 flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    onClick={() =>
+                      navigate(
+                        `/admin/registrations/${selectedRegistration._id}/edit`
+                      )
+                    }
+                  >
+                    <PencilIcon className="h-4 w-4 mr-2" />
+                    Edit Registration
+                  </button>
+                  <button
+                    type="button"
+                    className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    onClick={closeModal}
+                  >
+                    <XMarkIcon className="h-4 w-4 mr-2" />
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

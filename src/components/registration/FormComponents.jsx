@@ -1,12 +1,12 @@
 import { Controller } from "react-hook-form";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import ReCAPTCHA from "react-google-recaptcha";
 import { useController } from "react-hook-form";
 import { useRegistration } from "../../hooks";
 import Select from "react-select";
 import { CheckCircle } from "lucide-react";
-
+import registrationsApi from "../../api/registrationsApi";
 // Form section component
 export const FormSection = ({ title, children }) => {
   return (
@@ -216,55 +216,73 @@ export const FormField = ({
 // OTP Input component
 export const OtpInput = ({ onVerify, email, phone }) => {
   const [otp, setOtp] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isSendingOtp, setIsSendingOtp] = useState(false);
-  const [sentOtp, setSentOtp] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  const [isVerified, setIsVerified] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [error, setError] = useState("");
+  const inputRef = useRef();
 
-  const { sendOtp, verifyOtp } = useRegistration();
-
-  // Countdown timer for OTP resend
-  useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
+  // Send OTP function
+  const sendOtp = async () => {
+    if (!email || !phone) {
+      setError("Email and phone number are required");
+      return;
     }
-  }, [countdown]);
-
-  // Handle sending OTP
-  const handleSendOtp = async () => {
-    if (!email && !phone) return;
-
-    setIsSendingOtp(true);
 
     try {
-      // await sendOtp(email);
-      setSentOtp(true);
-      setCountdown(60); // 60 seconds countdown
+      setIsLoading(true);
+      setError("");
+
+      // Make API call to send OTP
+      const response = await registrationsApi.sendOtp(email, phone);
+      if (response.status === "success") {
+        setOtpSent(true);
+        toast.success("OTP sent successfully. Please check your email.");
+
+        // For development, auto-fill OTP if available in response
+        if (process.env.NODE_ENV !== "production" && response.otp) {
+          setOtp(response.otp);
+        }
+      } else {
+        setError("Failed to send OTP. Please try again.");
+      }
     } catch (error) {
       console.error("Error sending OTP:", error);
+      setError(
+        error.response?.message || "Failed to send OTP. Please try again."
+      );
     } finally {
-      setIsSendingOtp(false);
+      setIsLoading(false);
     }
   };
 
-  // Handle verifying OTP
-  const handleVerifyOtp = async () => {
-    if (!otp || otp.length < 6) return;
-
-    setIsVerifying(true);
+  // Verify OTP function
+  const verifyOtp = async () => {
+    if (!otp) {
+      setError("Please enter the OTP");
+      return;
+    }
 
     try {
-      // const result = await verifyOtp(email, otp);
-      // onVerify(result.verified);
-      onVerify(true);
-      setIsVerified(true);
+      setIsLoading(true);
+      setError("");
+
+      // Make API call to verify OTP
+      const response = await registrationsApi.verifyOtp(email, phone, otp);
+
+      if (response.status === "success") {
+        // Pass the verification status, token, and registration ID to parent
+        onVerify(true, response.verificationToken, response.registrationId);
+        toast.success("Email verified successfully!");
+      } else {
+        setError("OTP verification failed. Please try again.");
+      }
     } catch (error) {
       console.error("Error verifying OTP:", error);
-      onVerify(false);
+      setError(
+        error.response?.message || "OTP verification failed. Please try again."
+      );
     } finally {
-      setIsVerifying(false);
+      setIsLoading(false);
     }
   };
 
@@ -274,14 +292,14 @@ export const OtpInput = ({ onVerify, email, phone }) => {
         Verify your email address
       </h4>
 
-      {!sentOtp ? (
+      {!otpSent ? (
         <button
           type="button"
-          onClick={handleSendOtp}
-          disabled={isSendingOtp || !email}
+          onClick={sendOtp}
+          disabled={isLoading || !email}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
         >
-          {isSendingOtp ? "Sending OTP..." : "Send OTP"}
+          {isLoading ? "Sending OTP..." : "Send OTP"}
         </button>
       ) : (
         <div className="space-y-3">
@@ -293,52 +311,25 @@ export const OtpInput = ({ onVerify, email, phone }) => {
               placeholder="Enter 6-digit OTP"
               className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none"
               maxLength={6}
+              ref={inputRef}
             />
 
             <button
               type="button"
-              onClick={handleVerifyOtp}
-              disabled={isVerifying || otp.length < 6 || isVerified}
+              onClick={verifyOtp}
+              disabled={isLoading || otp.length < 6}
               className={`px-4 py-2 flex items-center gap-2 rounded-md ${
-                isVerified
+                isLoading
                   ? "bg-green-600 text-white"
                   : "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400"
               }`}
             >
-              {isVerified ? (
-                <>
-                  Verified <CheckCircle className="w-5 h-5 text-white" />
-                </>
-              ) : isVerifying ? (
-                "Verifying..."
-              ) : (
-                "Verify"
-              )}
+              {isLoading ? "Verifying..." : "Verify"}
             </button>
           </div>
 
           <div className="flex justify-between text-sm">
-            {isVerified ? (
-              <>
-                <p className="text-gray-600">✅ OTP verified successfully</p>
-              </>
-            ) : (
-              <>
-                <p className="text-gray-600">OTP sent to {email}</p>
-                {countdown > 0 ? (
-                  <p className="text-gray-600">Resend in {countdown}s</p>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleSendOtp}
-                    disabled={isSendingOtp}
-                    className="text-blue-600 hover:underline"
-                  >
-                    Resend OTP
-                  </button>
-                )}
-              </>
-            )}
+            {error && <p className="text-red-600">{error}</p>}
           </div>
         </div>
       )}

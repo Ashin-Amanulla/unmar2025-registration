@@ -361,7 +361,7 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
   // Handle form submission
   const onSubmit = async (data) => {
     try {
-      setIsSubmitting(true);
+    setIsSubmitting(true);
       console.log("Submitting registration data:", data);
 
       // Submit registration data
@@ -575,7 +575,7 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
               )}
 
               {!captchaVerified && (
-                <CaptchaVerification onVerify={handleCaptchaVerified} />
+              <CaptchaVerification onVerify={handleCaptchaVerified} />
               )}
 
               {captchaVerified && (
@@ -614,7 +614,7 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
               required={true}
             />
 
-            <div className="mb-4">
+<div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Contact Number *
               </label>
@@ -796,15 +796,15 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
         {currentStep === 3 && (
           <FormSection title="Event Attendance">
             <div className="space-y-6">
-              <FormField
+            <FormField
                 label="Will you attend the event?"
-                name="isAttending"
-                type="checkbox"
-                control={control}
-                errors={errors}
-              />
+              name="isAttending"
+              type="checkbox"
+              control={control}
+              errors={errors}
+            />
 
-              {isAttending && (
+            {isAttending && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
@@ -1110,11 +1110,11 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
               <FormField
                 label="Mode of Transport"
                 name="modeOfTransport"
-                type="select"
-                control={control}
-                errors={errors}
-                required={true}
-                options={[
+                  type="select"
+                  control={control}
+                  errors={errors}
+                  required={true}
+                  options={[
                   { value: "car", label: "Car" },
                   { value: "train", label: "Train" },
                   { value: "flight", label: "Flight" },
@@ -1139,13 +1139,13 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                   />
 
                   {watch("readyForRideShare") === "yes" && (
-                    <FormField
+                  <FormField
                       label="How many people can you accommodate in your car?"
                       name="rideShareCapacity"
-                      type="number"
-                      control={control}
-                      errors={errors}
-                      required={true}
+                    type="number"
+                    control={control}
+                    errors={errors}
+                    required={true}
                       min={1}
                       max={6}
                     />
@@ -1169,21 +1169,21 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
               {watch("modeOfTransport") !== "car" &&
                 watch("modeOfTransport") && (
                   <div className="space-y-4">
-                    <FormField
+                <FormField
                       label="Would you like to share a ride from your starting point?"
                       name="wantRideShare"
                       type="select"
-                      control={control}
-                      errors={errors}
+                  control={control}
+                  errors={errors}
                       required={true}
-                      options={[
+                  options={[
                         { value: "yes", label: "Yes" },
                         { value: "no", label: "No" },
                       ]}
                     />
 
                     {watch("wantRideShare") === "yes" && (
-                      <FormField
+                  <FormField
                         label="Number of people in your group"
                         name="rideShareGroupSize"
                         type="number"
@@ -1200,9 +1200,9 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
               <FormField
                 label="Special Requirements for Travel"
                 name="travelSpecialRequirements"
-                type="textarea"
-                control={control}
-                errors={errors}
+                    type="textarea"
+                    control={control}
+                    errors={errors}
                 placeholder="Any specific requirements for travel (e.g., wheelchair access, medical conditions, etc.)"
               />
 
@@ -1353,7 +1353,7 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                 </div>
               )}
 
-              <FormField
+            <FormField
                 label={`${
                   hasPreviousContribution ? "Additional " : ""
                 }Contribution Amount (in ₹)`}

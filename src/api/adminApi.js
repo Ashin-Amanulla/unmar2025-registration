@@ -11,7 +11,8 @@ const adminApi = {
      */
     getDashboardStats: async () => {
         try {
-            const response = await axios.get('/admin/dashboard');
+            const response = await axios.get('/admin/dashboard-stats');
+            console.log(response.data);
             return response.data;
         } catch (error) {
             throw error.response?.data || { message: 'Failed to fetch dashboard data' };
@@ -132,6 +133,21 @@ const adminApi = {
             throw error.response?.data || { message: 'Login failed' };
         }
     },
+
+    getAnalytics: async () => {
+        try {
+            const response = await axios.get('/admin/analytics');
+            console.log("analytics", response);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || { message: 'Failed to fetch analytics' }; 
+        }
+    }   
+    
 };
+
+
+
+
 
 export default adminApi; 

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-toastify";
+import axios from "axios";
 import { RegistrationSchemas } from "../../zod-form-validators/registrationform";
 import { useRegistration } from "../../hooks";
 import VerificationQuiz from "../VerificationQuiz";
@@ -37,6 +38,7 @@ import {
   DEFAULT_TSHIRT_SIZES,
   PROFESSION_OPTIONS,
 } from "../../assets/data";
+import registrationsApi from "../../api/registrationsApi";
 // Initialize countries data
 countries.registerLocale(enLocale);
 
@@ -66,6 +68,9 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
   const [hasPreviousContribution, setHasPreviousContribution] = useState(false);
   const [previousContributionAmount, setPreviousContributionAmount] =
     useState(0);
+  const [verificationToken, setVerificationToken] = useState("");
+  const [registrationId, setRegistrationId] = useState(null);
+  const [totalContributionAmount, setTotalContributionAmount] = useState(0);
 
   const { submitRegistration, calculateContribution } = useRegistration();
   const { isPaymentProcessing, initiatePayment } = usePayment();
@@ -117,15 +122,16 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       keySkills: "",
 
       // Event attendance
-      isAttending: false,
+      isAttending: true,
       attendees: {
-        adults: { veg: 0, nonVeg: 0 },
+        adults: { veg: 0, nonVeg: 1 },
         teens: { veg: 0, nonVeg: 0 },
         children: { veg: 0, nonVeg: 0 },
         toddlers: { veg: 0, nonVeg: 0 },
       },
       eventContribution: [],
       contributionDetails: "",
+      interestedInSponsorship: true,
 
       // Transportation
       travellingFrom: "",
@@ -145,7 +151,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       accommodationRemarks: "",
 
       // Financial
-      willContribute: false,
+      willContribute: true,
       contributionAmount: 0,
       proposedAmount: 0,
 
@@ -155,7 +161,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       mentorshipOptions: [],
       trainingOptions: [],
       seminarOptions: [],
-      tshirtInterest: false,
+      tshirtInterest: true,
       tshirtSizes: DEFAULT_TSHIRT_SIZES,
     },
   });
@@ -193,6 +199,16 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
           }
 
           toast.info("Previous form data restored");
+
+          // If there's existing contribution data, restore the total amount
+          if (
+            parsedData.contributionAmount > 0 &&
+            parsedData.paymentStatus === "Completed"
+          ) {
+            setTotalContributionAmount(parsedData.contributionAmount);
+            setHasPreviousContribution(true);
+            setPreviousContributionAmount(parsedData.contributionAmount);
+          }
         }
       } catch (error) {
         console.error("Error parsing saved form data:", error);
@@ -218,9 +234,20 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
   }, [emailVerified, captchaVerified, quizCompleted, setValue]);
 
   // Email verification handler
-  const handleEmailVerified = (status) => {
+  const handleEmailVerified = (status, token, id) => {
     setEmailVerified(status);
     setValue("emailVerified", status);
+
+    // Store verification token and registration ID if provided
+    if (token) {
+      setVerificationToken(token);
+      localStorage.setItem(`${storageKey}-token`, token);
+    }
+
+    if (id) {
+      setRegistrationId(id);
+      localStorage.setItem(`${storageKey}-id`, id);
+    }
   };
 
   // CAPTCHA verification handler
@@ -234,6 +261,15 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
     setQuizCompleted(status);
     setValue("verificationQuizPassed", status);
   };
+
+  // Add effect to load verification token and registration ID from storage
+  useEffect(() => {
+    const savedToken = localStorage.getItem(`${storageKey}-token`);
+    const savedId = localStorage.getItem(`${storageKey}-id`);
+
+    if (savedToken) setVerificationToken(savedToken);
+    if (savedId) setRegistrationId(savedId);
+  }, [storageKey]);
 
   // Validate current step before moving to next
   const validateCurrentStep = async () => {
@@ -348,11 +384,177 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
     return await trigger(fieldsToValidate);
   };
 
-  // Handle next button click
+  // Add new function to save step data to backend
+  const saveStepToBackend = async (stepNumber, formData) => {
+    try {
+      // Get step-specific data to send to backend
+      const stepData = getStepData(stepNumber, formData);
+      const payload = {
+        step: stepNumber,
+        stepData,
+        verificationToken,
+      };
+      console.log(registrationId, "kjk", payload);
+
+      // Send data to backend API
+      const response = await registrationsApi.create(registrationId, payload);
+      console.log(response);
+      // Update registration ID if this is a new registration
+      if (response.data?.registrationId && !registrationId) {
+        setRegistrationId(response.data.registrationId);
+        localStorage.setItem(`${storageKey}-id`, response.data.registrationId);
+      }
+
+      // Show success toast
+      toast.success(`Step ${stepNumber} saved successfully`);
+
+      return true;
+    } catch (error) {
+      console.error("Error saving step:", error);
+
+      // Handle different error types
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error("Failed to save this step. Please try again.");
+      }
+
+      return false;
+    }
+  };
+
+  // Helper function to get step-specific data
+  const getStepData = (stepNumber, formData) => {
+    // Base registration type is always needed
+    const baseData = {
+      registrationType: "Alumni",
+    };
+
+    // Extract only the fields needed for the specific step
+    switch (stepNumber) {
+      case 1: // Personal info
+        return {
+          ...baseData,
+          name: formData.name,
+          email: formData.email,
+          contactNumber: formData.contactNumber,
+          whatsappNumber: formData.whatsappNumber,
+          school: formData.school,
+          yearOfPassing: formData.yearOfPassing,
+          country: formData.country,
+          stateUT: formData.stateUT,
+          district: formData.district,
+          bloodGroup: formData.bloodGroup,
+          emailVerified: formData.emailVerified,
+          captchaVerified: formData.captchaVerified,
+          verificationQuizPassed: formData.verificationQuizPassed,
+        };
+
+      case 2: // Professional
+        return {
+          ...baseData,
+          profession: formData.profession,
+          professionalDetails: formData.professionalDetails,
+          areaOfExpertise: formData.areaOfExpertise,
+          keySkills: formData.keySkills,
+        };
+
+      case 3: // Event Attendance
+        return {
+          ...baseData,
+          isAttending: formData.isAttending,
+          attendees: formData.attendees,
+          eventContribution: formData.eventContribution,
+          contributionDetails: formData.contributionDetails,
+        };
+
+      case 4: // Sponsorship
+        return {
+          ...baseData,
+          interestedInSponsorship: formData.interestedInSponsorship,
+          sponsorshipTier: formData.sponsorshipTier,
+          sponsorshipDetails: formData.sponsorshipDetails,
+        };
+
+      case 5: // Transportation
+        return {
+          ...baseData,
+          startPincode: formData.startPincode,
+          district: formData.district,
+          state: formData.state,
+          taluk: formData.taluk,
+          originArea: formData.originArea,
+          nearestLandmark: formData.nearestLandmark,
+          travelDate: formData.travelDate,
+          travelTime: formData.travelTime,
+          modeOfTransport: formData.modeOfTransport,
+          readyForRideShare: formData.readyForRideShare,
+          rideShareCapacity: formData.rideShareCapacity,
+          needParking: formData.needParking,
+          wantRideShare: formData.wantRideShare,
+          rideShareGroupSize: formData.rideShareGroupSize,
+          travelSpecialRequirements: formData.travelSpecialRequirements,
+        };
+
+      case 6: // Accommodation
+        return {
+          ...baseData,
+          accommodation: formData.accommodation,
+          accommodationCapacity: formData.accommodationCapacity,
+          accommodationLocation: formData.accommodationLocation,
+          accommodationRemarks: formData.accommodationRemarks,
+        };
+
+      case 7: // Optional
+        return {
+          ...baseData,
+          spouseNavodayan: formData.spouseNavodayan,
+          unmaFamilyGroups: formData.unmaFamilyGroups,
+          mentorshipOptions: formData.mentorshipOptions,
+          trainingOptions: formData.trainingOptions,
+          seminarOptions: formData.seminarOptions,
+          tshirtInterest: formData.tshirtInterest,
+          tshirtSizes: formData.tshirtSizes,
+        };
+
+      case 8: // Financial
+        return {
+          ...baseData,
+          willContribute: formData.willContribute,
+          contributionAmount:
+            totalContributionAmount || formData.contributionAmount,
+          proposedAmount: formData.proposedAmount,
+          paymentStatus: formData.paymentStatus,
+          paymentId: formData.paymentId,
+          paymentDetails: formData.paymentDetails,
+          paymentRemarks: formData.paymentRemarks,
+          formSubmissionComplete: true,
+        };
+
+      default:
+        return baseData;
+    }
+  };
+
+  // Modify the handle next step function to save data
   const handleNextStep = async () => {
     const isStepValid = await validateCurrentStep();
+    alert("saving..." + isStepValid);
 
     if (isStepValid) {
+      // Save current step to backend before moving to next
+      if (currentStep > 0) {
+        // Skip saving verification step
+        const formData = getValues();
+        const saveSuccess = await saveStepToBackend(currentStep, formData);
+
+        if (!saveSuccess) {
+          // Don't proceed if save failed
+          return;
+        }
+      }
+
+      // Proceed to next step
       setCurrentStep((prevStep) => prevStep + 1);
       window.scrollTo(0, 0);
     }
@@ -364,18 +566,25 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
     window.scrollTo(0, 0);
   };
 
-  // Handle form submission
+  // Modify the onSubmit function to use the registration ID
   const onSubmit = async (data) => {
     try {
       setIsSubmitting(true);
       console.log("Submitting registration data:", data);
 
-      // Submit registration data
-      // await submitRegistration(data);
+      // Save final step
+      const saveSuccess = await saveStepToBackend(currentStep, data);
+
+      if (!saveSuccess) {
+        setIsSubmitting(false);
+        return;
+      }
 
       // Clear saved data
       localStorage.removeItem(storageKey);
       localStorage.removeItem(`${storageKey}-step`);
+      localStorage.removeItem(`${storageKey}-token`);
+      localStorage.removeItem(`${storageKey}-id`);
 
       // Show success message
       toast.success("🎉 Registration completed successfully!");
@@ -391,7 +600,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
     }
   };
 
-  // Handle final submit button click
+  // Fix the handleSubmitForm function
   const handleSubmitForm = async () => {
     if (!hasPreviousContribution) {
       toast.error(
@@ -413,9 +622,108 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
     }
   };
 
+  // Fix the payment processing and form submission
+  const proceedWithPayment = async (contributionAmount) => {
+    // Make sure we have a registration ID
+    if (!registrationId) {
+      toast.error(
+        "Please complete at least the first step of the form before making a payment"
+      );
+      return;
+    }
+
+    await initiatePayment({
+      amount: contributionAmount,
+      name: watch("name"),
+      email: watch("email"),
+      contact: watch("contactNumber"),
+      notes: {
+        registrationType: "Alumni",
+        isAttending: isAttending ? "Yes" : "No",
+        registrationId: registrationId,
+      },
+      onSuccess: async (response) => {
+        // Process payment confirmation with backend
+        let payload = {
+          amount: contributionAmount,
+          paymentMethod: "razorpay",
+          paymentGatewayResponse: response,
+          purpose: "registration",
+        };
+        try {
+          await registrationsApi.transactionRegister(registrationId, payload);
+
+          // Calculate cumulative contribution
+          const newTotalAmount =
+            Number(totalContributionAmount) + Number(contributionAmount);
+          setTotalContributionAmount(newTotalAmount);
+
+          // Update local form state
+          setValue("paymentStatus", "Completed");
+          setValue("paymentId", response.razorpay_payment_id);
+          setValue("paymentDetails", JSON.stringify(response));
+          setHasPreviousContribution(true);
+          setPreviousContributionAmount(newTotalAmount);
+          setValue("contributionAmount", 0);
+          setValue("totalContributionAmount", newTotalAmount);
+
+          // Show success toast with total contribution
+          toast.success(
+            `Payment of ₹${contributionAmount} successful! Your total contribution is now ₹${newTotalAmount}`
+          );
+
+          // Save the payment info to backend
+          await saveStepToBackend(8, {
+            ...getValues(),
+            contributionAmount: newTotalAmount,
+          });
+        } catch (error) {
+          console.error("Error confirming payment:", error);
+          toast.error(
+            "Payment was processed but confirmation failed. Please contact support."
+          );
+        }
+      },
+      onFailure: (error) => {
+        console.error("Payment failed:", error);
+        toast.error("Payment failed. Please try again.");
+      },
+    });
+  };
+
+  // Add useEffect to show mission message when entering financial step
+  useEffect(() => {
+    if (currentStep === 8) {
+      setShowMissionMessage(true);
+    }
+  }, [currentStep]);
+
+  // Handle skipping optional step
+  const handleSkipOptional = () => {
+    // Clear all optional fields
+    setValue("spouseNavodayan", "");
+    setValue("unmaFamilyGroups", "No");
+    setValue("mentorshipOptions", []);
+    setValue("trainingOptions", []);
+    setValue("seminarOptions", []);
+    setValue("tshirtInterest", "no");
+    setValue("tshirtSizes", DEFAULT_TSHIRT_SIZES);
+
+    // Move to next step
+    setCurrentStep((prevStep) => prevStep + 1);
+    window.scrollTo(0, 0);
+  };
+
+  // Add the handlePayment function
   const handlePayment = async () => {
     try {
       const contributionAmount = watch("contributionAmount") || 0;
+
+      // Check if amount is valid
+      if (contributionAmount <= 0) {
+        toast.error("Please enter a valid contribution amount");
+        return;
+      }
 
       // Skip expense comparison for additional contributions
       if (!hasPreviousContribution) {
@@ -450,57 +758,6 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       console.error("Payment error:", error);
       toast.error("Payment failed. Please try again.");
     }
-  };
-
-  const proceedWithPayment = async (contributionAmount) => {
-    await initiatePayment({
-      amount: contributionAmount,
-      name: watch("name"),
-      email: watch("email"),
-      contact: watch("contactNumber"),
-      notes: {
-        registrationType: "Alumni",
-        isAttending: isAttending ? "Yes" : "No",
-      },
-      onSuccess: (response) => {
-        setValue("paymentStatus", "completed");
-        setValue("paymentId", response.razorpay_payment_id);
-        setHasPreviousContribution(true);
-        setPreviousContributionAmount(contributionAmount);
-
-        // Show simple success toast instead of alert dialog
-        toast.success(
-          "Payment successful! You can now submit your registration."
-        );
-      },
-      onFailure: (error) => {
-        console.error("Payment failed:", error);
-        toast.error("Payment failed. Please try again.");
-      },
-    });
-  };
-
-  // Add useEffect to show mission message when entering financial step
-  useEffect(() => {
-    if (currentStep === 8) {
-      setShowMissionMessage(true);
-    }
-  }, [currentStep]);
-
-  // Handle skipping optional step
-  const handleSkipOptional = () => {
-    // Clear all optional fields
-    setValue("spouseNavodayan", "");
-    setValue("unmaFamilyGroups", "No");
-    setValue("mentorshipOptions", []);
-    setValue("trainingOptions", []);
-    setValue("seminarOptions", []);
-    setValue("tshirtInterest", "no");
-    setValue("tshirtSizes", DEFAULT_TSHIRT_SIZES);
-
-    // Move to next step
-    setCurrentStep((prevStep) => prevStep + 1);
-    window.scrollTo(0, 0);
   };
 
   return (
@@ -622,7 +879,9 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 email.includes("@") &&
                 watch("contactNumber") && (
                   <OtpInput
-                    onVerify={handleEmailVerified}
+                    onVerify={(status, token, id) =>
+                      handleEmailVerified(status, token, id)
+                    }
                     email={email}
                     phone={watch("contactNumber")}
                   />
@@ -1661,8 +1920,9 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                       />
                     </svg>
                     <p className="text-green-800">
-                      Previous contribution of ₹{previousContributionAmount} was
-                      successful
+                      Total contribution of ₹
+                      {totalContributionAmount || previousContributionAmount}{" "}
+                      received
                     </p>
                   </div>
                 </div>
@@ -1680,6 +1940,27 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 min={1}
                 valueAsNumber={true}
               />
+
+              {hasPreviousContribution && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <p className="text-blue-800 flex items-center">
+                    <svg
+                      className="h-5 w-5 text-blue-500 mr-2"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    You can make additional contributions if you wish. Your
+                    total contribution will be the sum of all payments.
+                  </p>
+                </div>
+              )}
 
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -1734,7 +2015,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                           />
                         </svg>
                         {hasPreviousContribution
-                          ? "Contribute More"
+                          ? "Add Contribution"
                           : "Proceed to Pay"}{" "}
                         ₹{watch("contributionAmount")}
                       </>

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import registrationsApi from '../api/registrationsApi';
+import adminApi from '../api/adminApi';
 const ADMIN_KEYS = {
     DASHBOARD_STATS: 'dashboard-stats',
     REGISTRATIONS: 'registrations',
@@ -15,9 +16,10 @@ export const useAdmin = () => {
     const { data: dashboardStats, isLoading: isLoadingStats } = useQuery({
         queryKey: [ADMIN_KEYS.DASHBOARD_STATS],
         queryFn: async () => {
-            const response = await fetch('/api/admin/dashboard-stats');
-            if (!response.ok) throw new Error('Failed to fetch dashboard stats');
-            return response.json();
+            const response = await adminApi.getDashboardStats();
+            console.log("response", response);
+            if (!response) throw new Error('Failed to fetch dashboard stats');
+            return response;
         },
         refetchInterval: 30000, // Refetch every 30 seconds
     });
@@ -29,8 +31,9 @@ export const useAdmin = () => {
             queryFn: async () => {
                 const queryParams = new URLSearchParams(filters).toString();
                 const response = await registrationsApi.getAllRegistrations(queryParams);
-                if (!response.ok) throw new Error('Failed to fetch registrations');
-                return response.json();
+                console.log("response2", response);
+                if (!response) throw new Error('Failed to fetch registrations');
+                return response;
             },
             keepPreviousData: true,
         });
@@ -41,9 +44,10 @@ export const useAdmin = () => {
         return useQuery({
             queryKey: [ADMIN_KEYS.ANALYTICS],
             queryFn: async () => {
-                const response = await fetch('/api/admin/analytics');
-                if (!response.ok) throw new Error('Failed to fetch analytics data');
-                return response.json();
+                const response = await adminApi.getAnalytics();
+                console.log("analytics", response);
+                if (!response) throw new Error('Failed to fetch analytics data');
+                return response
             },
             refetchInterval: 60000, // Refetch every minute
         });

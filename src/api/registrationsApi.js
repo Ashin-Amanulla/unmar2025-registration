@@ -10,9 +10,9 @@ const registrationsApi = {
      * @param {Object} registrationData - Registration form data
      * @returns {Promise} - Promise with registration data
      */
-    create: async (registrationData) => {
+    create: async (registrationId, payload) => {
         try {
-            const response = await axios.post('/registrations', registrationData);
+            const response = await axios.post(`/registrations/step/${registrationId || 'new'}`, payload);
             return response.data;
         } catch (error) {
             throw error.response?.data || { message: 'Registration failed' };
@@ -65,10 +65,15 @@ const registrationsApi = {
         }
     },
 
-
-    getAllRegistrations: async () => {
+    /**
+     * Get all registrations with optional query parameters
+     * @param {string} queryParams - URL query parameters for filtering
+     * @returns {Promise} - Promise with registrations data
+     */
+    getAllRegistrations: async (queryParams = '') => {
         try {
-            const response = await axios.get('/registrations');
+            const url = queryParams ? `/registrations?${queryParams}` : '/registrations';
+            const response = await axios.get(url);
             return response.data;
         } catch (error) {
             throw error.response?.data || { message: 'Failed to fetch registrations' };
@@ -80,7 +85,7 @@ const registrationsApi = {
             const response = await axios.get(`/registrations/${id}`);
             return response.data;
         } catch (error) {
-            throw error.response?.data || { message: 'Failed to fetch registration' };  
+            throw error.response?.data || { message: 'Failed to fetch registration' };
         }
     },
 
@@ -91,7 +96,7 @@ const registrationsApi = {
         } catch (error) {
             throw error.response?.data || { message: 'Failed to delete registration' };
         }
-    }   ,    
+    },
 
     updateRegistration: async (id, registrationData) => {
         try {
@@ -100,7 +105,33 @@ const registrationsApi = {
         } catch (error) {
             throw error.response?.data || { message: 'Failed to update registration' };
         }
-    }   
+    },
+
+    sendOtp: async (email, contactNumber) => {
+        try {
+            const response = await axios.post('/registrations/send-otp', { email, contactNumber });
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || { message: 'Failed to send OTP' };
+        }
+    },
+    verifyOtp: async (email, contactNumber, otp) => {
+        try {
+            const response = await axios.post('/registrations/verify-otp', { email, contactNumber, otp });
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || { message: 'Failed to verify OTP' };
+        }
+    },
+
+    transactionRegister: async (registrationId, payload) => {
+        try {
+            const response = await axios.post(`/registrations/${registrationId}/payment`, payload);
+            return response.data;
+        } catch (error) {
+            throw error.response?.data || { message: 'Failed to register transaction' };
+        }
+    },
 
 };
 
