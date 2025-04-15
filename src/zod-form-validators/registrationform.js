@@ -73,7 +73,7 @@ const AlumniSchema = BaseRegistrationSchema.extend({
     travellingFrom: z.string().optional(),
     travelDateTime: z.string().optional(),
     modeOfTravel: z.enum(["Car", "Train", "Flight", "Other"]).optional(),
-    needParking: z.boolean().optional(),
+    needParking: z.string().optional(),
     carPooling: z.enum(["No", "Yes To Venue", "Yes From Venue", "Yes Both Ways"]).optional(),
     coShareSeats: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
@@ -216,7 +216,7 @@ const StaffSchema = BaseRegistrationSchema.extend({
         (val) => (val === "" ? undefined : Number(val)),
         z.number().min(1).optional()
     ),
-    needParking: z.string().optional(),
+    needParking: z.string().optional(), 
     wantRideShare: z.string().optional(),
     rideShareGroupSize: z.preprocess(
         (val) => (val === "" ? undefined : Number(val)),
