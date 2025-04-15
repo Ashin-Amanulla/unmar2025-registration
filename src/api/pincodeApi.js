@@ -14,6 +14,7 @@ export const getPincodeDetails = async (pincode) => {
                 'Content-Type': 'application/json'
             }
         });
+        console.log(response.data);
 
         if (!response.data || !Array.isArray(response.data) || response.data.length === 0) {
             throw new Error("Invalid API response format");

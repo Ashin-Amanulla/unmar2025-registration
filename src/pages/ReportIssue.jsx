@@ -127,6 +127,36 @@ const ReportIssue = () => {
                 )}
               </div>
 
+              {/* phone number  */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  {...register("phone")}
+                  placeholder="Enter your  phone number"
+                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
+                />
+                {errors.phone && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.phone.message}
+                  </p>
+                )}
+              </div>
+
+              {/* attachment */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Attachment
+                </label>
+                <input
+                  type="file"
+                  {...register("attachment")}
+                  className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
+                />  
+              </div>
+
               {/* Submit Button */}
               <motion.button
                 type="submit"
@@ -171,43 +201,16 @@ const ReportIssue = () => {
                 Additional Information
               </h3>
               <p className="text-sm text-gray-600 mb-4">
-                Our support team will review your issue report and respond
-                within 24-48 hours. For urgent matters, please contact us
-                directly via phone or email on our contact page.
+                Our support team will review your issue report and notify you by email with the resolution as soon as possible.
               </p>
-              <div className="flex justify-between items-center">
-                <motion.div
-                  whileHover={{ scale: 1.03 }}
-                  className="text-primary hover:text-primary-dark"
-                >
-                  <Link to="/contact" className="text-sm font-medium">
-                    Contact Us Directly
-                  </Link>
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.03 }}
-                  className="text-primary hover:text-primary-dark"
-                >
-                  <ScrollLink to="/" className="text-sm font-medium">
-                    Return to Home
-                  </ScrollLink>
-                </motion.div>
-              </div>
+            
             </div>
           </div>
         </div>
 
         {/* Support Information */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Technical Support Hours
-            </h3>
-            <p className="text-gray-600">
-              Monday to Friday: 9:00 AM - 6:00 PM IST
-            </p>
-            <p className="text-gray-600">Email response: Within 24 hours</p>
-          </div>
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-1 gap-4">
+        
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               Common Solutions

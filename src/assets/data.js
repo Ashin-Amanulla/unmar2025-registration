@@ -15,7 +15,7 @@ export const jnvSchools = [
   },
   { value: "JNV Lakshadweep", label: "JNV Lakshadweep" },
   { value: "JNV Mahe", label: "JNV Mahe" },
-  { value: "Other", label: "Other" },
+  { value: "Other", label: "Other JNV" },
 ];
 
 
@@ -123,10 +123,12 @@ export const KERALA_DISTRICTS = [
   { value: "Kasaragod", label: "Kasaragod" },
 ];
 
-// Add this with other constants at the top
+// Add this with other constants at the top 
+///TODO
+//arrange it in alphabetical order
 export const PROFESSION_OPTIONS = [
   // Healthcare Professions
-  { value: "Doctor", label: "Doctor" },
+  { value: "Doctor", label: "Doctor-General  Physician" },
   { value: "Surgeon", label: "Surgeon" },
   { value: "Dentist", label: "Dentist" },
   { value: "Nurse", label: "Nurse" },
@@ -138,6 +140,11 @@ export const PROFESSION_OPTIONS = [
   { value: "Homeopathic Doctor", label: "Homeopathic Doctor" },
   { value: "Veterinarian", label: "Veterinarian" },
   { value: "Cardiologist", label: "Cardiologist" },
+  { value: "Endocrinologist", label: "Endocrinologist" },
+  { value: "Gastroenterologist", label: "Gastroenterologist" },
+  { value: "Hematologist", label: "Hematologist" },
+  { value: "Hepatologist", label: "Hepatologist" },
+  { value: "Pulmonologist", label: "Pulmonologist" },
   { value: "Neurologist", label: "Neurologist" },
   { value: "Pediatrician", label: "Pediatrician" },
   { value: "Gynecologist", label: "Gynecologist" },
@@ -210,10 +217,16 @@ export const PROFESSION_OPTIONS = [
   { value: "Academic Writer", label: "Academic Writer" },
   { value: "Education Policy Analyst", label: "Education Policy Analyst" },
   { value: "Special Education Teacher", label: "Special Education Teacher" },
+  {value:"Entomologist",label:"Entomologist"},
+  {value:"Microbiologist",label:"Microbiologist"},
+  {value:"Zoologist",label:"Zoologist"},
+  {value:"Botanist",label:"Botanist"},
+  {value:"Geologist",label:"Geologist"},
+  {value:"Geographer",label:"Geographer"},
+  
 
   // Business & Management
-  { value: "Entrepreneur", label: "Entrepreneur" },
-  { value: "Business Owner", label: "Business Owner" },
+  { value: "Business Owner/Entrepreneur", label: "Business Owner/Entrepreneur" },
   { value: "CEO", label: "CEO" },
   { value: "Manager", label: "Manager" },
   { value: "Consultant", label: "Consultant" },

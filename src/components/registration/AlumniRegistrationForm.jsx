@@ -37,6 +37,7 @@ import {
   TSHIRT_SIZES,
   DEFAULT_TSHIRT_SIZES,
   PROFESSION_OPTIONS,
+  KERALA_DISTRICTS,
 } from "../../assets/data";
 import registrationsApi from "../../api/registrationsApi";
 // Initialize countries data
@@ -355,14 +356,10 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       }
     } else if (currentStep === 6) {
       // Accommodation
-      if (isAttending) {
-        fieldsToValidate = ["accommodation"];
+      fieldsToValidate = ["accommodation"];
 
-        if (accommodation === "provide") {
-          fieldsToValidate.push("accommodationCapacity");
-        }
-      } else {
-        return true;
+      if (accommodation === "provide") {
+        fieldsToValidate.push("accommodationCapacity");
       }
     } else if (currentStep === 7) {
       // Optional fields
@@ -483,6 +480,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
           district: formData.district,
           state: formData.state,
           taluk: formData.taluk,
+          subPostOffice: formData.subPostOffice,
           originArea: formData.originArea,
           nearestLandmark: formData.nearestLandmark,
           travelDate: formData.travelDate,
@@ -539,7 +537,6 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
   // Modify the handle next step function to save data
   const handleNextStep = async () => {
     const isStepValid = await validateCurrentStep();
-    alert("saving..." + isStepValid);
 
     if (isStepValid) {
       // Save current step to backend before moving to next
@@ -736,7 +733,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
           (attendees?.children?.veg || 0) + (attendees?.children?.nonVeg || 0);
 
         const totalExpense =
-          adultCount * 500 + teenCount * 250 + childCount * 150;
+          adultCount * 500 + teenCount * 350 + childCount * 150;
 
         if (
           isAttending &&
@@ -843,6 +840,12 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 required={true}
                 disabled={emailVerified}
               />
+              <label
+                htmlFor="contactNumber"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Whatsapp Number
+              </label>
               <PhoneInput
                 country={"in"}
                 value={watch("contactNumber")}
@@ -977,7 +980,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contact Number *
+                Whatsapp Number
               </label>
               <PhoneInput
                 country={"in"}
@@ -1013,7 +1016,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                WhatsApp Number (if different)
+                Contact Number (if different from whatsapp number)
               </label>
               <PhoneInput
                 country={"in"}
@@ -1065,7 +1068,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
             />
 
             <FormField
-              label="JNV School"
+              label=" JNV"
               name="school"
               type="select"
               control={control}
@@ -1088,7 +1091,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
             />
 
             <FormField
-              label="Country"
+              label="Current country of residence"
               name="country"
               type="select"
               control={control}
@@ -1104,7 +1107,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
             {watch("country") === "IN" && (
               <FormField
-                label="State/UT"
+                label="Current State/UT of residence"
                 name="stateUT"
                 type="select"
                 control={control}
@@ -1116,7 +1119,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
             {watch("stateUT") === "Kerala" && (
               <FormField
-                label="District"
+                label="Current District of residence"
                 name="district"
                 type="select"
                 control={control}
@@ -1200,7 +1203,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                         the seating and catering arrangements accordingly.
                       </p>
                     </div>
-
+                    {/* TODO: add a note here add toddler count as well as veg non veg based on age */}
                     <AttendeeCounter
                       values={
                         watch("attendees") || {
@@ -1219,15 +1222,15 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
                     <div className="space-y-4 mt-8">
                       <h3 className="text-lg font-medium text-gray-900">
-                        Event Participation
+                        Summit 2025 Participation
                       </h3>
 
                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                         <p className="text-yellow-800 text-sm">
-                          Note: Your participation request will be reviewed by
-                          the organizing team. While we try to accommodate
-                          everyone, we cannot guarantee 100% acceptance due to
-                          various constraints.
+                          Note: This data is collected purely for planning
+                          purposes. Your request will be reviewed by the
+                          organizing team. While we try to accommodate everyone,
+                          we cannot guarantee 100% due to various constraints.
                         </p>
                       </div>
 
@@ -1248,6 +1251,18 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                           {
                             value: "culturalTrainer",
                             label: "Cultural Program (as Trainer)",
+                          },
+                          {
+                            value: "photography",
+                            label: "Photography",
+                          },
+                          {
+                            value: "videography",
+                            label: "Videography",
+                          },
+                          {
+                            value: "liveStreaming",
+                            label: "Live Streaming",
                           },
                           {
                             value: "culturalParticipant",
@@ -1298,6 +1313,12 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
             {watch("interestedInSponsorship") && (
               <>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <p className="text-yellow-800 text-sm">
+                    The organizing team will contact you directly to discuss the
+                    details and process.
+                  </p>
+                </div>
                 <div className="mb-6">
                   <p className="text-gray-600">
                     Please select your preferred sponsorship tier. Our team will
@@ -1376,6 +1397,18 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                             "taluk",
                             postOffice.Block || postOffice.District
                           );
+                          //array of sub post offices
+                          const subPostOffices = data[0].PostOffice.filter(
+                            (office) => office.BranchType === "Sub Post Office"
+                          );
+
+                          // If you want only names of sub post offices:
+                          const subPostOfficeNames = subPostOffices.map(
+                            (office) => office.Name
+                          );
+
+                          // Example: set subPostOffice as an array of names
+                          setValue("subPostOffice", subPostOfficeNames);
 
                           // Show success message with location details
                           toast.dismiss();
@@ -1387,6 +1420,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                           setValue("district", "");
                           setValue("state", "");
                           setValue("taluk", "");
+                          setValue("subPostOffice", "");
                           toast.dismiss();
                           toast.error("Invalid pincode or location not found");
                         }
@@ -1395,6 +1429,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                         setValue("district", "");
                         setValue("state", "");
                         setValue("taluk", "");
+                        setValue("subPostOffice", "");
                         toast.dismiss();
                         toast.error(
                           "Error fetching location details. Please try again."
@@ -1441,6 +1476,12 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                       <div>
                         <p className="text-sm text-gray-500">State</p>
                         <p className="text-sm font-medium">{watch("state")}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Sub Post Office</p>
+                        <p className="text-sm font-medium">
+                          {watch("subPostOffice")}
+                        </p>
                       </div>
                     </div>
                   ) : (
@@ -1550,7 +1591,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
               {watch("modeOfTransport") !== "car" && (
                 <div className="space-y-4">
                   <FormField
-                    label="Would you like to share a ride from your starting point?"
+                    label="Would you like to connect with other alumni  from your starting point?"
                     name="wantRideShare"
                     type="select"
                     control={control}
@@ -1600,7 +1641,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <p className="text-gray-600 text-sm">
                         Based on your location ({watch("district")},{" "}
-                        {watch("state")}), we'll:
+                        {watch("state")}), you may:
                       </p>
                       <ul className="list-disc list-inside text-gray-600 text-sm mt-2 space-y-1">
                         <li>
@@ -1646,18 +1687,19 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
               required={true}
               options={[
                 { value: "not-required", label: "I don't need accommodation" },
+
+                {
+                  value: "provide",
+                  label: "I can provide accommodation to others at my place",
+                },
                 {
                   value: "need",
                   label:
-                    "I'm open to joining someone for shared accommodation.",
-                },
-                {
-                  value: "provide",
-                  label: "I can provide accommodation to others",
+                    "Please connect me with alumni who is providing accomodation at their place",
                 },
                 {
                   value: "discount-hotel",
-                  label: "I need discount hotel booking",
+                  label: "I need discounted hotel booking",
                 },
               ]}
             />
@@ -1671,6 +1713,168 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                     arrangements.
                   </p>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    label="Accommodation Location Pincode"
+                    name="accommodationPincode"
+                    type="text"
+                    control={control}
+                    errors={errors}
+                    required={true}
+                    placeholder="Enter your accommodation location pincode"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    onChange={async (e) => {
+                      const pincodeValue = e.target.value;
+                      if (pincodeValue.length === 6) {
+                        try {
+                          // Show loading state
+                          toast.info("Fetching location details...", {
+                            autoClose: false,
+                            closeButton: false,
+                            isLoading: true,
+                          });
+
+                          const data = await getPincodeDetails(pincodeValue);
+
+                          if (
+                            data &&
+                            data[0] &&
+                            data[0].Status === "Success" &&
+                            data[0].PostOffice &&
+                            data[0].PostOffice.length > 0
+                          ) {
+                            const postOffice = data[0].PostOffice[0];
+
+                            setValue(
+                              "accommodationDistrict",
+                              postOffice.District
+                            );
+                            setValue("accommodationState", postOffice.State);
+                            setValue(
+                              "accommodationTaluk",
+                              postOffice.Block || postOffice.District
+                            );
+                            //array of sub post offices
+                            const subPostOffices = data[0].PostOffice.filter(
+                              (office) =>
+                                office.BranchType === "Sub Post Office"
+                            );
+
+                            // If you want only names of sub post offices:
+                            const subPostOfficeNames = subPostOffices.map(
+                              (office) => office.Name
+                            );
+
+                            // Example: set subPostOffice as an array of names
+                            setValue(
+                              "accommodationSubPostOffice",
+                              subPostOfficeNames
+                            );
+
+                            // Show success message with location details
+                            toast.dismiss();
+                            toast.success(
+                              `Location found: ${postOffice.District}, ${postOffice.State}`
+                            );
+                          } else {
+                            // Clear the values if pincode is invalid
+                            setValue("accommodationDistrict", "");
+                            setValue("accommodationState", "");
+                            setValue("accommodationTaluk", "");
+                            setValue("accommodationSubPostOffice", "");
+                            toast.dismiss();
+                            toast.error(
+                              "Invalid pincode or location not found"
+                            );
+                          }
+                        } catch (error) {
+                          // Clear the values if there's an error
+                          setValue("accommodationDistrict", "");
+                          setValue("accommodationState", "");
+                          setValue("accommodationTaluk", "");
+                          setValue("accommodationSubPostOffice", "");
+                          toast.dismiss();
+                          toast.error(
+                            "Error fetching location details. Please try again."
+                          );
+                        }
+                      } else {
+                        // Clear the values if pincode is not 6 digits
+                        setValue("accommodationDistrict", "");
+                        setValue("accommodationState", "");
+                        setValue("accommodationTaluk", "");
+                        setValue("accommodationSubPostOffice", "");
+                        // Don't show any message for incomplete pincode
+                      }
+                    }}
+                  />
+
+                  <FormField
+                    label="Nearest Landmark"
+                    name="accommodationLandmark"
+                    type="text"
+                    control={control}
+                    errors={errors}
+                    placeholder="e.g., Railway Station, Bus Stand, etc."
+                  />
+                </div>
+
+                {/* Display location details if pincode is valid */}
+                {watch("accommodationPincode")?.length === 6 && (
+                  <div className="bg-gray-50 p-4 rounded-lg mt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                      Location Details
+                    </h4>
+                    {watch("accommodationDistrict") &&
+                    watch("accommodationState") ? (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-500">District</p>
+                          <p className="text-sm font-medium">
+                            {watch("accommodationDistrict")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Taluk/Block</p>
+                          <p className="text-sm font-medium">
+                            {watch("accommodationTaluk")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">State</p>
+                          <p className="text-sm font-medium">
+                            {watch("accommodationState")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">
+                            Sub Post Office
+                          </p>
+                          <p className="text-sm font-medium">
+                            {watch("accommodationSubPostOffice")}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <p className="text-sm text-red-600">
+                          Invalid pincode or location not found
+                        </p>
+                        <FormField
+                          label="Please enter your accommodation area details"
+                          name="accommodationArea"
+                          type="text"
+                          control={control}
+                          errors={errors}
+                          required={true}
+                          placeholder="Enter your city/town name"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <FormField
                   label="How many people can you accommodate?"
@@ -2084,15 +2288,24 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                     initiatives.
                   </p>
                   <p>
-                    Your contribution will directly impact our community. We're
-                    currently supporting alumni from Wayanad and Kozhikode who
-                    lost everything in the 2024 landslides.
+                    Your contribution will directly impact our community. We
+                    would like to support alumni/students from JNV Wayanad and
+                    JNV Kozhikode who lost everything in the 2024 landslides.
                   </p>
                   <p className="font-medium text-lg">
                     UNMA alumni stand together 24/7, supporting each other
                     through thick and thin. Your generosity strengthens this
                     support system.
                   </p>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <p className="text-yellow-800 text-sm">
+                      Note: To complete your registration, you need to pay the
+                      contribution amount.Now you will be redirected to the
+                      payment gateway. For international payments, kindky
+                      contact the organizing team to share you the NRI account
+                      details.
+                    </p>
+                  </div>
                 </div>
               }
               confirmText="I Understand"

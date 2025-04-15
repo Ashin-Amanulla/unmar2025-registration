@@ -218,7 +218,7 @@ const Home = () => {
                 >
                   <span className="text-yellow-400 text-xl">★</span>
                   <span className="text-white font-bold tracking-wider">
-                    United Navodayan Malayalee Association UNMA Meet
+                    United Navodayan Malayalee Association (UNMA ) 
                   </span>
                   <span className="text-yellow-400 text-xl">★</span>
                 </motion.div>
@@ -233,17 +233,17 @@ const Home = () => {
               >
                 <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-white leading-tight mb-6">
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 via-pink-300 to-yellow-400">
-                    UNMA 2025
+                    SUMMIT 2025
                   </span>
                   <br />
                   <span className="text-white">
-                    Reuniting Navodaya Memories
+                    Reuniting Navodayan Memories
                   </span>
                 </h1>
                 <p className="text-xl text-white/80 leading-relaxed max-w-3xl mx-auto">
-                  Join us for a memorable gathering of Jawahar Navodaya
-                  Vidyalaya alumni from across Kerala. Reconnect with old
-                  friends, share stories, and create new memories.
+                  Lets have a memorable gathering of Jawahar Navodaya
+                  Vidyalaya alumni from 14 districts of Kerala,Mahe , Lakshadweep and other navodayans residing in Kerala. Reconnect with school
+                  friends and staff ,share stories, and create new memories.
                 </p>
               </motion.div>
 
@@ -277,7 +277,7 @@ const Home = () => {
                   <div>
                     <h3 className="text-white text-lg font-semibold">When</h3>
                     <p className="text-white text-xl font-bold">
-                      August 30, 2025
+                      Saturday, August 30, 2025 
                     </p>
                     <p className="text-white/80">9:00 AM - 5:00 PM</p>
                   </div>
@@ -314,7 +314,7 @@ const Home = () => {
                   </div>
                   <div>
                     <h3 className="text-white text-lg font-semibold">Who</h3>
-                    <p className="text-white text-xl font-bold">JNV Alumni</p>
+                    <p className="text-white text-xl font-bold">Navodayans and Staff</p>
                     <p className="text-white/80">Family Members Welcome</p>
                   </div>
                 </motion.div>
@@ -760,7 +760,7 @@ const Home = () => {
                 {
                   question: "Is there a registration fee?",
                   answer:
-                    "There is a registration fee based on head count",
+                    "There is a registration fees based on the number of attendees..",
                 },
                 {
                   question:

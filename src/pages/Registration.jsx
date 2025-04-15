@@ -57,7 +57,7 @@ const Registration = () => {
     <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="bg-white shadow-md rounded-lg p-6">
         <h1 className="text-3xl font-bold text-center mb-8 text-blue-800">
-          UNMA 2025 Registration
+          SUMMIT 2025 Registration
         </h1>
 
         {!registrationType ? (

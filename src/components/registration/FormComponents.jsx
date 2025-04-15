@@ -275,6 +275,7 @@ export const OtpInput = ({ onVerify, email, phone }) => {
         toast.success("Email verified successfully!");
       } else {
         setError("OTP verification failed. Please try again.");
+        toast.error("OTP verification failed. Please try again.");
       }
     } catch (error) {
       console.error("Error verifying OTP:", error);

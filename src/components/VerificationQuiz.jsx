@@ -7,21 +7,23 @@ const question = {
     "Please select the 3 most relevant options related to your 7 years JNV life:",
   options: [
     "Mess Hall",
+    "Drill",
     "PT",
     "SUPW",
+    "Head Master",
     "House Master",
+    "Principal",
     "Upuma",
     "Sambar",
-    "Principal",
+    "Head Boy",
     "School Captain",
+    "Wave the Flag",
     "We shall Overcome",
     "Assembly",
     "Roll Number",
     "Cluster Meet",
     "Residence",
     "Dormitory",
-    "Head Master",
-    "Head Boy",
     "Vindya",
     
   ],
@@ -33,9 +35,13 @@ const question = {
     "We shall Overcome",
     "PT",
     "SUPW",
+    "Upuma",
+    "Sambar",
     "House Master",
     "Principal",
     "Assembly",
+    "School Captain",
+
   ], // These are the correct options
   requiredCorrect: 3, // Number of correct answers needed to pass
 };

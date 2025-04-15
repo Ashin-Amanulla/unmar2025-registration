@@ -15,7 +15,7 @@ const RegistrationType = ({ onSelectType }) => {
       id: "Alumni",
       title: "Alumni",
       description:
-        "Register as a former JNV student who graduated from the school.",
+        "Register as a former JNV student .",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -252,7 +252,7 @@ const RegistrationType = ({ onSelectType }) => {
           Select Your Connection to JNV
         </h2>
         <p className="text-gray-600 mt-2">
-          Please select how you are connected to JNV for the UNMA 2025 event
+          Please select how you are connected to JNV for the SUMMIT 2025 event
         </p>
       </div>
 
