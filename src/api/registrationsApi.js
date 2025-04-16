@@ -1,5 +1,5 @@
 import axios from './axios';
-
+import  {otpInstance}  from './otpAxios';
 /**
  * Registrations API Service
  * Handles event registration related API calls
@@ -28,9 +28,12 @@ const registrationsApi = {
      */
     verifyOtp: async (email, phone, otp) => {
         try {
+            alert(email, phone, otp);
             const response = await axios.post('/registrations/verify-otp', { email, phone, otp });
+            alert(response);
             return response.data;
         } catch (error) {
+            alert(error);
             throw error.response?.data || { message: 'OTP verification failed' };
         }
     },
@@ -117,7 +120,7 @@ const registrationsApi = {
     },
     verifyOtp: async (email, contactNumber, otp) => {
         try {
-            const response = await axios.post('/registrations/verify-otp', { email, contactNumber, otp });
+            const response = await otpInstance.post('/registrations/verify-otp', { email, contactNumber, otp });
             return response.data;
         } catch (error) {
             throw error.response?.data || { message: 'Failed to verify OTP' };

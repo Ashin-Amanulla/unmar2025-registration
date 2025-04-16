@@ -219,7 +219,22 @@ export const OtpInput = ({ onVerify, email, phone }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [error, setError] = useState("");
+  const [resendDisabled, setResendDisabled] = useState(false);
+  const [countdown, setCountdown] = useState(60);
   const inputRef = useRef();
+
+  useEffect(() => {
+    let timer;
+    if (resendDisabled && countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+    } else if (countdown === 0) {
+      setResendDisabled(false);
+      setCountdown(60);
+    }
+    return () => clearInterval(timer);
+  }, [resendDisabled, countdown]);
 
   // Send OTP function
   const sendOtp = async () => {
@@ -231,25 +246,24 @@ export const OtpInput = ({ onVerify, email, phone }) => {
     try {
       setIsLoading(true);
       setError("");
+      setResendDisabled(true);
+      setCountdown(60);
 
       // Make API call to send OTP
       const response = await registrationsApi.sendOtp(email, phone);
       if (response.status === "success") {
         setOtpSent(true);
         toast.success("OTP sent successfully. Please check your email.");
-
-        // For development, auto-fill OTP if available in response
-        if (process.env.NODE_ENV !== "production" && response.otp) {
-          setOtp(response.otp);
-        }
       } else {
         setError("Failed to send OTP. Please try again.");
+        setResendDisabled(false);
       }
     } catch (error) {
       console.error("Error sending OTP:", error);
       setError(
         error.response?.message || "Failed to send OTP. Please try again."
       );
+      setResendDisabled(false);
     } finally {
       setIsLoading(false);
     }
@@ -270,18 +284,15 @@ export const OtpInput = ({ onVerify, email, phone }) => {
       const response = await registrationsApi.verifyOtp(email, phone, otp);
 
       if (response.status === "success") {
-        // Pass the verification status, token, and registration ID to parent
         onVerify(true, response.verificationToken, response.registrationId);
         toast.success("Email verified successfully!");
       } else {
-        setError("OTP verification failed. Please try again.");
-        toast.error("OTP verification failed. Please try again.");
+        setError("Invalid OTP. Please try again.");
+        toast.error("Invalid OTP. Please try again.");
       }
     } catch (error) {
       console.error("Error verifying OTP:", error);
-      setError(
-        error.response?.message || "OTP verification failed. Please try again."
-      );
+      setError(error.response?.message || "Invalid OTP. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -329,8 +340,18 @@ export const OtpInput = ({ onVerify, email, phone }) => {
             </button>
           </div>
 
-          <div className="flex justify-between text-sm">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2 text-sm">
             {error && <p className="text-red-600">{error}</p>}
+            <button
+              type="button"
+              onClick={sendOtp}
+              disabled={resendDisabled}
+              className={`text-blue-600 hover:text-blue-800 ${
+                resendDisabled ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
+              {resendDisabled ? `Resend OTP in ${countdown}s` : "Resend OTP"}
+            </button>
           </div>
         </div>
       )}

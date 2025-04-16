@@ -12,6 +12,8 @@ const axiosInstance = axios.create({
     timeout: 10000, // 10 seconds
 });
 
+
+
 // Request interceptor for adding auth token
 axiosInstance.interceptors.request.use(
     (config) => {
