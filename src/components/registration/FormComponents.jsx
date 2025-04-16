@@ -95,7 +95,7 @@ export const FormField = ({
               error ? "border-red-500" : "border-gray-300"
             } ${disabled ? "bg-gray-100" : ""}`}
           >
-            <option value="">Select {label}</option>
+            <option value="">Select </option>
             {options &&
               options.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -290,7 +290,7 @@ export const OtpInput = ({ onVerify, email, phone }) => {
   return (
     <div className="mt-4 p-4 bg-gray-50 rounded-md">
       <h4 className="text-sm font-medium text-gray-700 mb-3">
-        Verify your email address
+        Verify your contact details
       </h4>
 
       {!otpSent ? (
@@ -304,13 +304,13 @@ export const OtpInput = ({ onVerify, email, phone }) => {
         </button>
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-col sm:flex-row items-center gap-2">
             <input
               type="text"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               placeholder="Enter 6-digit OTP"
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none"
+              className="w-full sm:flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none"
               maxLength={6}
               ref={inputRef}
             />
@@ -319,7 +319,7 @@ export const OtpInput = ({ onVerify, email, phone }) => {
               type="button"
               onClick={verifyOtp}
               disabled={isLoading || otp.length < 6}
-              className={`px-4 py-2 flex items-center gap-2 rounded-md ${
+              className={`w-full sm:w-auto px-4 py-2 flex items-center justify-center gap-2 rounded-md ${
                 isLoading
                   ? "bg-green-600 text-white"
                   : "bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400"

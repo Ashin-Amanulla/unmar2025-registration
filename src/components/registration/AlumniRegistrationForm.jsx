@@ -1222,20 +1222,14 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
                     <div className="space-y-4 mt-8">
                       <h3 className="text-lg font-medium text-gray-900">
-                        Summit 2025 Participation
+                      Your interest in additional offerings during
+                      the meet
                       </h3>
 
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                        <p className="text-yellow-800 text-sm">
-                          Note: This data is collected purely for planning
-                          purposes. Your request will be reviewed by the
-                          organizing team. While we try to accommodate everyone,
-                          we cannot guarantee 100% due to various constraints.
-                        </p>
-                      </div>
+                  
 
                       <FormField
-                        label="What would you like to do for the event?"
+                        label="What would you like to do additionally during the meet?"
                         name="eventParticipation"
                         type="multiselect"
                         control={control}
@@ -1277,14 +1271,20 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                       />
 
                       <FormField
-                        label="Please explain your participation in detail"
+                        label="Please explain your proposal in detail"
                         name="participationDetails"
                         type="textarea"
                         control={control}
                         errors={errors}
-                        placeholder="Provide detailed information about your proposed participation, including any specific requirements, duration, space needed, etc."
+                        placeholder="Provide detailed information about your proposed offering, including any specific requirements, duration, space needed, etc."
                         rows={4}
                       />
+                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                        <p className="text-yellow-800 text-sm">
+                          Note: Thank you. Your interest for additional offering will be considered based on the requirements
+                          and other logistics factors(time, space etc.) for inclusion. 
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
