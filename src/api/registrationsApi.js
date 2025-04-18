@@ -1,5 +1,5 @@
 import axios from './axios';
-import  {otpInstance}  from './otpAxios';
+import { otpInstance } from './otpAxios';
 /**
  * Registrations API Service
  * Handles event registration related API calls
@@ -12,10 +12,18 @@ const registrationsApi = {
      */
     create: async (registrationId, payload) => {
         try {
+            console.log(`API call to /registrations/step/${registrationId || 'new'}`, payload);
             const response = await axios.post(`/registrations/step/${registrationId || 'new'}`, payload);
             return response.data;
         } catch (error) {
-            throw error.response?.data || { message: 'Registration failed' };
+            console.error("Registration API error:", error);
+            if (error.response?.data) {
+                throw error.response.data;
+            } else if (error.message) {
+                throw { message: error.message };
+            } else {
+                throw { message: 'Registration failed' };
+            }
         }
     },
 
@@ -28,13 +36,21 @@ const registrationsApi = {
      */
     verifyOtp: async (email, phone, otp) => {
         try {
-            alert(email, phone, otp);
-            const response = await axios.post('/registrations/verify-otp', { email, phone, otp });
-            alert(response);
+            const response = await otpInstance.post('/registrations/verify-otp', {
+                email,
+                contactNumber: phone,
+                otp
+            });
             return response.data;
         } catch (error) {
-            alert(error);
-            throw error.response?.data || { message: 'OTP verification failed' };
+            if (error.response && error.response.status === 401) {
+                return {
+                    status: 'error',
+                    message: error.response.data.message || 'Invalid OTP. Please try again.',
+                    verified: false
+                };
+            }
+            throw new Error(error.response?.data?.message || 'Failed to verify OTP');
         }
     },
 
@@ -116,14 +132,6 @@ const registrationsApi = {
             return response.data;
         } catch (error) {
             throw error.response?.data || { message: 'Failed to send OTP' };
-        }
-    },
-    verifyOtp: async (email, contactNumber, otp) => {
-        try {
-            const response = await otpInstance.post('/registrations/verify-otp', { email, contactNumber, otp });
-            return response.data;
-        } catch (error) {
-            throw error.response?.data || { message: 'Failed to verify OTP' };
         }
     },
 

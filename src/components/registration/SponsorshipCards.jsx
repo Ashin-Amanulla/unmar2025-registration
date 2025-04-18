@@ -226,6 +226,7 @@ const SponsorshipCards = ({ selectedTier, onSelectTier }) => {
                   </ul>
 
                   <button
+                  disabled={true}
                     className={`mt-6 md:mt-8 w-full py-2.5 md:py-3 px-4 md:px-6 rounded-xl font-medium transition-colors ${
                       selectedTier === tier.name
                         ? "bg-blue-600 text-white hover:bg-blue-700"

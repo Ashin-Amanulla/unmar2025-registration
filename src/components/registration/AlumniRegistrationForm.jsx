@@ -38,6 +38,7 @@ import {
   DEFAULT_TSHIRT_SIZES,
   PROFESSION_OPTIONS,
   KERALA_DISTRICTS,
+  EVENT_PARTICIPATION_OPTIONS,
 } from "../../assets/data";
 import registrationsApi from "../../api/registrationsApi";
 // Initialize countries data
@@ -101,7 +102,9 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
     formState: { errors, isDirty },
   } = useForm({
     resolver: zodResolver(RegistrationSchemas.Alumni),
-    mode: "onChange",
+    mode: "onBlur", // Changed from onChange to ensure validation runs when fields lose focus
+    reValidateMode: "onChange", // Added to ensure validation runs when values change
+    criteriaMode: "all", // Ensures all validation errors are collected
     defaultValues: {
       registrationType: "Alumni",
       name: "",
@@ -125,34 +128,51 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       // Event attendance
       isAttending: true,
       attendees: {
-        adults: { veg: 0, nonVeg: 1 },
+        adults: { veg: 0, nonVeg: 0 },
         teens: { veg: 0, nonVeg: 0 },
         children: { veg: 0, nonVeg: 0 },
         toddlers: { veg: 0, nonVeg: 0 },
       },
+      eventParticipation: [],
+      participationDetails: "",
       eventContribution: [],
       contributionDetails: "",
-      interestedInSponsorship: true,
+      interestedInSponsorship: false,
 
       // Transportation
-      travellingFrom: "",
-      travelDateTime: "",
-      modeOfTravel: undefined,
-      pincode: "",
-      needParking: false,
-      carPooling: "No",
-      coShareSeats: 0,
-      landmarks: "",
-      travelRemarks: "",
+      planTravel: false,
+      startPincode: "",
+      pinDistrict: "",
+      pinState: "",
+      pinTaluk: "",
+      originArea: "",
+      nearestLandmark: "",
+      travelDate: "",
+      travelTime: "",
+      modeOfTransport: "",
+      readyForRideShare: "",
+      rideShareCapacity: 1,
+      needParking: "",
+      wantRideShare: "",
+      rideShareGroupSize: 1,
+      travelSpecialRequirements: "",
 
       // Accommodation
+      planAccommodation: false,
       accommodation: "",
+      accommodationPincode: "",
+      accommodationDistrict: "",
+      accommodationState: "",
+      accommodationTaluk: "",
+      accommodationSubPostOffice: "",
+      accommodationLandmark: "",
+      accommodationArea: "",
       accommodationCapacity: 0,
       accommodationLocation: "",
       accommodationRemarks: "",
 
       // Financial
-      willContribute: true,
+      willContribute: false,
       contributionAmount: 0,
       proposedAmount: 0,
 
@@ -241,11 +261,13 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
     // Store verification token and registration ID if provided
     if (token) {
+      console.log("Setting verification token:", token);
       setVerificationToken(token);
       localStorage.setItem(`${storageKey}-token`, token);
     }
 
     if (id) {
+      console.log("Setting registration ID from OTP verification:", id);
       setRegistrationId(id);
       localStorage.setItem(`${storageKey}-id`, id);
     }
@@ -268,14 +290,33 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
     const savedToken = localStorage.getItem(`${storageKey}-token`);
     const savedId = localStorage.getItem(`${storageKey}-id`);
 
-    if (savedToken) setVerificationToken(savedToken);
-    if (savedId) setRegistrationId(savedId);
+    console.log("Loading from localStorage:", {
+      storageKey,
+      tokenKey: `${storageKey}-token`,
+      idKey: `${storageKey}-id`,
+      savedToken,
+      savedId,
+    });
+
+    if (savedToken) {
+      console.log(
+        "Restoring verification token from localStorage:",
+        savedToken
+      );
+      setVerificationToken(savedToken);
+    }
+
+    if (savedId) {
+      console.log("Restoring registration ID from localStorage:", savedId);
+      setRegistrationId(savedId);
+    }
   }, [storageKey]);
 
   // Validate current step before moving to next
   const validateCurrentStep = async () => {
     let fieldsToValidate = [];
 
+    // Collect fields to validate based on current step
     if (currentStep === 0) {
       // Verification step
       if (!emailVerified) {
@@ -287,13 +328,11 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         return false;
       }
       if (!quizCompleted) {
-        toast.error("Please complete the verification quiz");
+        toast.error("Please complete the Navodayan Quiz to continue");
         return false;
       }
       return true;
-    }
-
-    if (currentStep === 1) {
+    } else if (currentStep === 1) {
       // Personal info
       fieldsToValidate = [
         "name",
@@ -305,17 +344,32 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
       if (watch("country") === "India") {
         fieldsToValidate.push("stateUT");
+
+        // If state is Kerala, district is required
+        if (watch("stateUT") === "Kerala") {
+          fieldsToValidate.push("district");
+        }
       }
     } else if (currentStep === 2) {
-      // Professional info - all fields optional
-      return true;
+      // Professional info
+      fieldsToValidate = ["profession"];
+
+      // If profession is selected, related fields become required
+      const profession = watch("profession");
+      if (profession) {
+        if (profession === "Business Owner/Entrepreneur") {
+          fieldsToValidate.push("businessDetails");
+        }
+        fieldsToValidate.push("areaOfExpertise");
+      }
     } else if (currentStep === 3) {
       // Event attendance
       fieldsToValidate = ["isAttending"];
 
       if (isAttending) {
+        // Check attendees count
         const attendees = watch("attendees");
-        const totalAttendees = Object.values(attendees).reduce(
+        const totalAttendees = Object.values(attendees || {}).reduce(
           (sum, group) => sum + (group.veg || 0) + (group.nonVeg || 0),
           0
         );
@@ -324,14 +378,37 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
           toast.error("Please add at least one attendee");
           return false;
         }
+
+        // Event participation
+        fieldsToValidate.push("eventParticipation");
+
+        // If participation details are required based on selection
+        const eventParticipation = watch("eventParticipation") || [];
+        if (
+          eventParticipation.length > 0 &&
+          !eventParticipation.includes("none") &&
+          eventParticipation.some((option) => option !== "none")
+        ) {
+          fieldsToValidate.push("participationDetails");
+        }
       }
-      return true;
     } else if (currentStep === 4) {
       // Sponsorship
       fieldsToValidate = ["interestedInSponsorship"];
+
+      // If interested in sponsorship, require tier selection
+      if (watch("interestedInSponsorship")) {
+        fieldsToValidate.push("sponsorshipTier");
+      }
     } else if (currentStep === 5) {
       // Transportation
       if (isAttending) {
+        // Only validate if user opted to plan travel
+        const planTravel = watch("planTravel");
+        if (!planTravel) {
+          return true; // Skip validation if travel planning is not selected
+        }
+
         fieldsToValidate = [
           "startPincode",
           "travelDate",
@@ -339,14 +416,21 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
           "modeOfTransport",
         ];
 
+        // If location details couldn't be fetched, require originArea
+        if (!watch("pinDistrict") && watch("startPincode")?.length === 6) {
+          fieldsToValidate.push("originArea");
+        }
+
+        // Mode of transport specific validations
         if (watch("modeOfTransport") === "car") {
-          fieldsToValidate.push("readyForRideShare");
+          fieldsToValidate.push("readyForRideShare", "needParking");
+
           if (watch("readyForRideShare") === "yes") {
             fieldsToValidate.push("rideShareCapacity");
           }
-          fieldsToValidate.push("needParking");
-        } else {
+        } else if (watch("modeOfTransport")) {
           fieldsToValidate.push("wantRideShare");
+
           if (watch("wantRideShare") === "yes") {
             fieldsToValidate.push("rideShareGroupSize");
           }
@@ -356,185 +440,77 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       }
     } else if (currentStep === 6) {
       // Accommodation
+      // Only validate if user opted to plan accommodation
+      const planAccommodation = watch("planAccommodation");
+      if (!planAccommodation) {
+        return true; // Skip validation if accommodation planning is not selected
+      }
+
       fieldsToValidate = ["accommodation"];
 
       if (accommodation === "provide") {
-        fieldsToValidate.push("accommodationCapacity");
+        fieldsToValidate.push(
+          "accommodationPincode",
+          "accommodationCapacity",
+          "accommodationLocation"
+        );
+
+        // If location details couldn't be fetched, require accommodationArea
+        if (
+          !watch("accommodationDistrict") &&
+          watch("accommodationPincode")?.length === 6
+        ) {
+          fieldsToValidate.push("accommodationArea");
+        }
       }
     } else if (currentStep === 7) {
-      // Optional fields
+      // Optional fields - no required validation
       return true;
     } else if (currentStep === 8) {
       // Financial contribution
-      const contributionAmount = watch("contributionAmount");
-      if (
-        !hasPreviousContribution &&
-        (!contributionAmount || contributionAmount <= 0)
-      ) {
-        toast.error("Please enter a contribution amount");
-        return false;
+      fieldsToValidate = ["willContribute"];
+
+      if (watch("willContribute") && !hasPreviousContribution) {
+        fieldsToValidate.push("contributionAmount");
       }
-      return true;
     }
 
-    // Trigger validation for the current step's fields
-    return await trigger(fieldsToValidate);
-  };
+    // Force validation on all fields regardless of touched state
+    const validationResult = await trigger(fieldsToValidate, {
+      shouldFocus: true,
+    });
 
-  // Add new function to save step data to backend
-  const saveStepToBackend = async (stepNumber, formData) => {
-    try {
-      // Get step-specific data to send to backend
-      const stepData = getStepData(stepNumber, formData);
-      const payload = {
-        step: stepNumber,
-        stepData,
-        verificationToken,
-      };
-      console.log(registrationId, "kjk", payload);
+    if (!validationResult) {
+      // Get all validation errors
+      const errorFields = Object.keys(control._formState.errors);
 
-      // Send data to backend API
-      const response = await registrationsApi.create(registrationId, payload);
-      console.log(response);
-      // Update registration ID if this is a new registration
-      if (response.data?.registrationId && !registrationId) {
-        setRegistrationId(response.data.registrationId);
-        localStorage.setItem(`${storageKey}-id`, response.data.registrationId);
-      }
+      // Show specific error message for the first field that failed
+      if (errorFields.length > 0) {
+        const firstErrorField = errorFields[0];
+        const errorMessage =
+          control._formState.errors[firstErrorField]?.message;
 
-      // Show success toast
-      toast.success(`Step ${stepNumber} saved successfully`);
+        if (errorMessage) {
+          toast.error(errorMessage);
+        } else {
+          toast.error(`Please check the field: ${firstErrorField}`);
+        }
 
-      return true;
-    } catch (error) {
-      console.error("Error saving step:", error);
-
-      // Handle different error types
-      if (error.response?.data?.message) {
-        toast.error(error.response.data.message);
+        // Focus on the first error field
+        const errorElement = document.getElementsByName(firstErrorField)[0];
+        if (errorElement) {
+          errorElement.focus();
+        }
       } else {
-        toast.error("Failed to save this step. Please try again.");
+        // Generic error message
+        toast.error("Please fill in all required fields correctly");
       }
-
-      return false;
     }
+
+    return validationResult;
   };
 
-  // Helper function to get step-specific data
-  const getStepData = (stepNumber, formData) => {
-    // Base registration type is always needed
-    const baseData = {
-      registrationType: "Alumni",
-    };
-
-    // Extract only the fields needed for the specific step
-    switch (stepNumber) {
-      case 1: // Personal info
-        return {
-          ...baseData,
-          name: formData.name,
-          email: formData.email,
-          contactNumber: formData.contactNumber,
-          whatsappNumber: formData.whatsappNumber,
-          school: formData.school,
-          yearOfPassing: formData.yearOfPassing,
-          country: formData.country,
-          stateUT: formData.stateUT,
-          district: formData.district,
-          bloodGroup: formData.bloodGroup,
-          emailVerified: formData.emailVerified,
-          captchaVerified: formData.captchaVerified,
-          verificationQuizPassed: formData.verificationQuizPassed,
-        };
-
-      case 2: // Professional
-        return {
-          ...baseData,
-          profession: formData.profession,
-          professionalDetails: formData.professionalDetails,
-          areaOfExpertise: formData.areaOfExpertise,
-          keySkills: formData.keySkills,
-        };
-
-      case 3: // Event Attendance
-        return {
-          ...baseData,
-          isAttending: formData.isAttending,
-          attendees: formData.attendees,
-          eventContribution: formData.eventContribution,
-          contributionDetails: formData.contributionDetails,
-        };
-
-      case 4: // Sponsorship
-        return {
-          ...baseData,
-          interestedInSponsorship: formData.interestedInSponsorship,
-          sponsorshipTier: formData.sponsorshipTier,
-          sponsorshipDetails: formData.sponsorshipDetails,
-        };
-
-      case 5: // Transportation
-        return {
-          ...baseData,
-          startPincode: formData.startPincode,
-          district: formData.district,
-          state: formData.state,
-          taluk: formData.taluk,
-          subPostOffice: formData.subPostOffice,
-          originArea: formData.originArea,
-          nearestLandmark: formData.nearestLandmark,
-          travelDate: formData.travelDate,
-          travelTime: formData.travelTime,
-          modeOfTransport: formData.modeOfTransport,
-          readyForRideShare: formData.readyForRideShare,
-          rideShareCapacity: formData.rideShareCapacity,
-          needParking: formData.needParking,
-          wantRideShare: formData.wantRideShare,
-          rideShareGroupSize: formData.rideShareGroupSize,
-          travelSpecialRequirements: formData.travelSpecialRequirements,
-        };
-
-      case 6: // Accommodation
-        return {
-          ...baseData,
-          accommodation: formData.accommodation,
-          accommodationCapacity: formData.accommodationCapacity,
-          accommodationLocation: formData.accommodationLocation,
-          accommodationRemarks: formData.accommodationRemarks,
-        };
-
-      case 7: // Optional
-        return {
-          ...baseData,
-          spouseNavodayan: formData.spouseNavodayan,
-          unmaFamilyGroups: formData.unmaFamilyGroups,
-          mentorshipOptions: formData.mentorshipOptions,
-          trainingOptions: formData.trainingOptions,
-          seminarOptions: formData.seminarOptions,
-          tshirtInterest: formData.tshirtInterest,
-          tshirtSizes: formData.tshirtSizes,
-        };
-
-      case 8: // Financial
-        return {
-          ...baseData,
-          willContribute: formData.willContribute,
-          contributionAmount:
-            totalContributionAmount || formData.contributionAmount,
-          proposedAmount: formData.proposedAmount,
-          paymentStatus: formData.paymentStatus,
-          paymentId: formData.paymentId,
-          paymentDetails: formData.paymentDetails,
-          paymentRemarks: formData.paymentRemarks,
-          formSubmissionComplete: true,
-        };
-
-      default:
-        return baseData;
-    }
-  };
-
-  // Modify the handle next step function to save data
+  // Modify the handleNextStep function to create a new registration on first step
   const handleNextStep = async () => {
     const isStepValid = await validateCurrentStep();
 
@@ -543,6 +519,26 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       if (currentStep > 0) {
         // Skip saving verification step
         const formData = getValues();
+        const stepData = getStepData(currentStep, formData);
+
+        console.log(`Saving step ${currentStep} (${stepData._stepName}):`);
+        console.log("- Current registration ID:", registrationId);
+        console.log("- Form data:", formData);
+        console.log(
+          "- Structured section:",
+          stepData.formDataStructured[stepData._stepName]
+        );
+
+        // For first step after verification, always create a new registration
+        if (currentStep === 1) {
+          // Clear any existing registration ID to force creation of a new one
+          console.log(
+            "First step - creating a new registration instead of updating"
+          );
+          setRegistrationId(null);
+          localStorage.removeItem(`${storageKey}-id`);
+        }
+
         const saveSuccess = await saveStepToBackend(currentStep, formData);
 
         if (!saveSuccess) {
@@ -555,6 +551,202 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       setCurrentStep((prevStep) => prevStep + 1);
       window.scrollTo(0, 0);
     }
+  };
+
+  // Update the save function to always use 'new' for first step
+  const saveStepToBackend = async (stepNumber, formData) => {
+    try {
+      // Get step-specific data to send to backend
+      const stepData = getStepData(stepNumber, formData);
+
+      // For first step after verification, always create a new registration
+      const idToUse = stepNumber === 1 ? "new" : registrationId || "new";
+      console.log(`Saving step ${stepNumber} with ID:`, idToUse);
+
+      const payload = {
+        step: stepNumber,
+        stepData,
+        verificationToken,
+      };
+
+      // Send data to backend API
+      const response = await registrationsApi.create(idToUse, payload);
+
+      console.log("API response:", response);
+
+      // Update registration ID if this is a new registration
+      if (response.data?.registrationId) {
+        const newId = response.data.registrationId;
+        console.log("Setting registration ID:", newId);
+        setRegistrationId(newId);
+        localStorage.setItem(`${storageKey}-id`, newId);
+      }
+
+      // Show success toast
+      toast.success(`Step ${stepNumber} saved successfully`);
+
+      return true;
+    } catch (error) {
+      console.error("Error saving step:", error);
+
+      // If registration not found, try creating a new one
+      if (error.message === "Registration not found") {
+        console.log("Attempting to create new registration instead of update");
+        try {
+          const response = await registrationsApi.create("new", {
+            step: stepNumber,
+            stepData: getStepData(stepNumber, formData),
+            verificationToken,
+          });
+
+          if (response.data?.registrationId) {
+            const newId = response.data.registrationId;
+            console.log("Created new registration with ID:", newId);
+            setRegistrationId(newId);
+            localStorage.setItem(`${storageKey}-id`, newId);
+            toast.success(`Step ${stepNumber} saved successfully`);
+            return true;
+          }
+        } catch (retryError) {
+          console.error("Error creating new registration:", retryError);
+        }
+      }
+
+      // Handle different error types
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.message) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to save this step. Please try again.");
+      }
+
+      return false;
+    }
+  };
+
+  // Helper function to get step-specific data
+  const getStepData = (stepNumber, formData) => {
+    // Prepare basic structured data for all steps
+    const structuredData = {
+      registrationType: "Alumni",
+      formDataStructured: {
+        verification: {
+          emailVerified: formData.emailVerified,
+          captchaVerified: formData.captchaVerified,
+          quizPassed: formData.verificationQuizPassed,
+          email: formData.email,
+          contactNumber: formData.contactNumber,
+        },
+        personalInfo: {
+          name: formData.name,
+          email: formData.email,
+          contactNumber: formData.contactNumber,
+          whatsappNumber: formData.whatsappNumber,
+          school: formData.school,
+          yearOfPassing: formData.yearOfPassing,
+          country: formData.country,
+          stateUT: formData.stateUT,
+          district: formData.district,
+          bloodGroup: formData.bloodGroup,
+        },
+        professional: {
+          profession: formData.profession,
+          professionalDetails: formData.professionalDetails,
+          areaOfExpertise: formData.areaOfExpertise,
+          keySkills: formData.keySkills,
+        },
+        eventAttendance: {
+          isAttending: formData.isAttending,
+          attendees: formData.attendees,
+          eventContribution: formData.eventContribution,
+          contributionDetails: formData.contributionDetails,
+          eventParticipation: formData.eventParticipation,
+          participationDetails: formData.participationDetails,
+        },
+        sponsorship: {
+          interestedInSponsorship: formData.interestedInSponsorship,
+          sponsorshipTier: formData.sponsorshipTier,
+          sponsorshipDetails: formData.sponsorshipDetails,
+        },
+        transportation: {
+          planTransportation: formData.planTransportation,
+          startPincode: formData.startPincode,
+          pinDistrict: formData.pinDistrict,
+          pinState: formData.pinState,
+          pinTaluk: formData.pinTaluk,
+          subPostOffice: formData.subPostOffice,
+          originArea: formData.originArea,
+          nearestLandmark: formData.nearestLandmark,
+          travelDate: formData.travelDate,
+          travelTime: formData.travelTime,
+          modeOfTransport: formData.modeOfTransport,
+          readyForRideShare: formData.readyForRideShare,
+          rideShareCapacity: formData.rideShareCapacity,
+          needParking: formData.needParking,
+          wantRideShare: formData.wantRideShare,
+          rideShareGroupSize: formData.rideShareGroupSize,
+          travelSpecialRequirements: formData.travelSpecialRequirements,
+        },
+        accommodation: {
+          planAccommodation: formData.planAccommodation,
+          accommodation: formData.accommodation,
+          accommodationCapacity: formData.accommodationCapacity,
+          accommodationLocation: formData.accommodationLocation,
+          accommodationRemarks: formData.accommodationRemarks,
+          accommodationPincode: formData.accommodationPincode,
+          accommodationDistrict: formData.accommodationDistrict,
+          accommodationState: formData.accommodationState,
+          accommodationTaluk: formData.accommodationTaluk,
+          accommodationLandmark: formData.accommodationLandmark,
+          accommodationSubPostOffice: formData.accommodationSubPostOffice,
+          accommodationArea: formData.accommodationArea,
+        },
+        optional: {
+          spouseNavodayan: formData.spouseNavodayan,
+          unmaFamilyGroups: formData.unmaFamilyGroups,
+          mentorshipOptions: formData.mentorshipOptions,
+          trainingOptions: formData.trainingOptions,
+          seminarOptions: formData.seminarOptions,
+          tshirtInterest: formData.tshirtInterest,
+          tshirtSizes: formData.tshirtSizes,
+        },
+        financial: {
+          willContribute: formData.willContribute,
+          contributionAmount:
+            totalContributionAmount || formData.contributionAmount,
+          proposedAmount: formData.proposedAmount,
+          paymentStatus: formData.paymentStatus,
+          paymentId: formData.paymentId,
+          paymentDetails: formData.paymentDetails,
+          paymentRemarks: formData.paymentRemarks,
+        },
+      },
+    };
+
+    // For financial step, ensure the contribution amount is correctly set
+    if (stepNumber === 8) {
+      structuredData.formDataStructured.financial.contributionAmount =
+        totalContributionAmount || formData.contributionAmount;
+    }
+
+    // For logging purposes only
+    const stepNames = {
+      1: "personalInfo",
+      2: "professional",
+      3: "eventAttendance",
+      4: "sponsorship",
+      5: "transportation",
+      6: "accommodation",
+      7: "optional",
+      8: "financial",
+    };
+
+    // Return data with metadata for logging
+    return {
+      ...structuredData,
+      _stepName: stepNames[stepNumber] || "verification", // For console logging only
+    };
   };
 
   // Handle back button click
@@ -734,6 +926,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
 
         const totalExpense =
           adultCount * 500 + teenCount * 350 + childCount * 150;
+        setValue("proposedAmount", totalExpense);
 
         if (
           isAttending &&
@@ -741,7 +934,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
           contributionAmount < totalExpense
         ) {
           setAlertDialogConfig({
-            title: "Contribution Amount Warning",
+            title: "Contribution Alert",
             message: `Your contribution (₹${contributionAmount}) is less than the estimated expenses (₹${totalExpense}) for your group. Would you like to add more to the current amount?`,
             onConfirm: () => proceedWithPayment(contributionAmount),
           });
@@ -805,26 +998,19 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 </div>
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-amber-800">
-                    Important Notice for Alumni of Specific Schools
+                    <strong>
+                      A Note for Alumni from JNV Alappuzha,JNV Malappuram, and
+                      JNV Thrissur
+                    </strong>
                   </h3>
                   <div className="mt-2 text-sm text-amber-700">
                     <p>
-                      Alumni of{" "}
-                      <strong>
-                        JNV Malappuram, JNV Alappuzha, and JNV Thrissur
-                      </strong>{" "}
-                      have two options:
+                      The registration process of JNV Alappuzha,JNV
+                      Malappuram,and JNV Thrissur are routed through the
+                      respective alumni association as per the decision of these
+                      associations. Alumni from these schools are requested to
+                      contact your alumni leadership.
                     </p>
-                    <ul className="list-disc list-inside mt-2 ml-2 space-y-1">
-                      <li>
-                        Contact your respective school alumni committee for
-                        event registration, OR
-                      </li>
-                      <li>
-                        Register through this form by selecting "Other School"
-                        in the Personal Information step
-                      </li>
-                    </ul>
                   </div>
                 </div>
               </div>
@@ -937,7 +1123,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
               )}
             </FormSection>
 
-            <FormSection title="JNV Background Verification">
+            <FormSection title="Navodayan Quiz">
               {!quizCompleted && (
                 <VerificationQuiz onQuizComplete={handleQuizComplete} />
               )}
@@ -1096,7 +1282,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
               type="select"
               control={control}
               errors={errors}
-              required={true}
+              // required={true}
               options={countryOptions}
               placeholder="Select your country"
               isSearchable={true}
@@ -1220,54 +1406,22 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                       }}
                     />
 
+                    <hr />
+
                     <div className="space-y-4 mt-8">
                       <h3 className="text-lg font-medium text-gray-900">
-                      Your interest in additional offerings during
-                      the meet
+                        <strong>
+                          Your interest in additional offerings during the meet
+                        </strong>
                       </h3>
-
-                  
-
+                      <hr />
                       <FormField
                         label="What would you like to do additionally during the meet?"
                         name="eventParticipation"
                         type="multiselect"
                         control={control}
                         errors={errors}
-                        options={[
-                          { value: "none", label: "None" },
-                          { value: "volunteering", label: "Volunteering" },
-                          { value: "businessStalls", label: "Business Stalls" },
-                          {
-                            value: "artCraftBooks",
-                            label: "Display art & craft or books",
-                          },
-                          {
-                            value: "culturalTrainer",
-                            label: "Cultural Program (as Trainer)",
-                          },
-                          {
-                            value: "photography",
-                            label: "Photography",
-                          },
-                          {
-                            value: "videography",
-                            label: "Videography",
-                          },
-                          {
-                            value: "liveStreaming",
-                            label: "Live Streaming",
-                          },
-                          {
-                            value: "culturalParticipant",
-                            label: "Cultural Program (as Participant)",
-                          },
-                          { value: "bookRelease", label: "Book Release" },
-                          { value: "cinemaRelease", label: "Cinema Release" },
-                          { value: "displayCinema", label: "Display Cinema" },
-                          { value: "compliments", label: "Compliments" },
-                          { value: "other", label: "Other" },
-                        ]}
+                        options={EVENT_PARTICIPATION_OPTIONS}
                       />
 
                       <FormField
@@ -1279,10 +1433,15 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                         placeholder="Provide detailed information about your proposed offering, including any specific requirements, duration, space needed, etc."
                         rows={4}
                       />
-                          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                         <p className="text-yellow-800 text-sm">
-                          Note: Thank you. Your interest for additional offering will be considered based on the requirements
-                          and other logistics factors(time, space etc.) for inclusion. 
+                          <strong>
+                            Note: Kindly note that this is purely for the
+                            purpose of planning. Your interest for additional
+                            offering will be considered based on the
+                            requirements and other logistics factors(time, space
+                            etc.) for inclusion.
+                          </strong>
                         </p>
                       </div>
                     </div>
@@ -1350,327 +1509,386 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         {currentStep === 5 && isAttending && (
           <FormSection title="Transportation Details">
             <div className="space-y-6">
-              <div className="bg-blue-50 p-4 rounded-lg mb-6">
-                <p className="text-blue-800 text-sm">
-                  This information will help us organize group transportation
-                  from your area. We'll coordinate special bookings based on the
-                  number of alumni from each area.
-                </p>
+              <div className="flex items-start mb-4">
+                <div className="flex items-center h-5">
+                  <input
+                    id="planTravel"
+                    type="checkbox"
+                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    checked={watch("planTravel")}
+                    onChange={(e) => setValue("planTravel", e.target.checked)}
+                  />
+                </div>
+                <div className="ml-3 text-sm">
+                  <label
+                    htmlFor="planTravel"
+                    className="font-medium text-gray-900"
+                  >
+                    Plan your travel for UNMA Meet 2025
+                  </label>
+                  <p className="text-gray-500">
+                    This information will help us organize group transportation
+                    and ride sharing from your area. We will coordinate special
+                    bookings based on the number of alumni from each area. You
+                    will have opportunity to communicate the changes in your
+                    plan later.
+                  </p>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  label="Starting Location Pincode"
-                  name="startPincode"
-                  type="text"
-                  control={control}
-                  errors={errors}
-                  required={true}
-                  placeholder="Enter your starting location pincode"
-                  pattern="[0-9]{6}"
-                  maxLength={6}
-                  onChange={async (e) => {
-                    const pincodeValue = e.target.value;
-                    if (pincodeValue.length === 6) {
-                      try {
-                        // Show loading state
-                        toast.info("Fetching location details...", {
-                          autoClose: false,
-                          closeButton: false,
-                          isLoading: true,
-                        });
+              {watch("planTravel") && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
+                  <div className="bg-blue-50 p-4 rounded-lg mb-6">
+                    <p className="text-blue-800 text-sm">
+                      This information will help us organize group
+                      transportation from your area. We'll coordinate special
+                      bookings based on the number of alumni from each area.
+                    </p>
+                  </div>
 
-                        const data = await getPincodeDetails(pincodeValue);
+                  {/* First field - Starting Location */}
+                  <FormField
+                    label="Starting Location"
+                    name="originArea"
+                    type="text"
+                    control={control}
+                    errors={errors}
+                    // required={true}
+                    placeholder="Enter your city/town name (use official names)"
+                    helperText="Please use official names of the location for better coordination"
+                  />
 
-                        if (
-                          data &&
-                          data[0] &&
-                          data[0].Status === "Success" &&
-                          data[0].PostOffice &&
-                          data[0].PostOffice.length > 0
-                        ) {
-                          const postOffice = data[0].PostOffice[0];
+                  {/* Second field - Mode of Transport */}
+                  <FormField
+                    label="Mode of Transport"
+                    name="modeOfTransport"
+                    type="select"
+                    control={control}
+                    errors={errors}
+                    // required={true}
+                    options={[
+                      { value: "car", label: "Car" },
+                      { value: "train", label: "Train" },
+                      { value: "flight", label: "Flight" },
+                      { value: "bus", label: "Bus" },
+                      { value: "two-wheeler", label: "Two Wheeler" },
+                      { value: "other", label: "Other" },
+                    ]}
+                  />
 
-                          setValue("district", postOffice.District);
-                          setValue("state", postOffice.State);
-                          setValue(
-                            "taluk",
-                            postOffice.Block || postOffice.District
-                          );
-                          //array of sub post offices
-                          const subPostOffices = data[0].PostOffice.filter(
-                            (office) => office.BranchType === "Sub Post Office"
-                          );
+                  {/* Show pincode field only for modes other than flight and train */}
+                  {watch("modeOfTransport") &&
+                    !["flight", "train"].includes(watch("modeOfTransport")) && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField
+                          label="Starting Location Pincode"
+                          name="startPincode"
+                          type="text"
+                          control={control}
+                          errors={errors}
+                          // required={true}
+                          placeholder="Enter your starting location pincode"
+                          pattern="[0-9]{6}"
+                          maxLength={6}
+                          onChange={async (e) => {
+                            const pincodeValue = e.target.value;
+                            if (pincodeValue.length === 6) {
+                              try {
+                                // Show loading state
+                                toast.info("Fetching location details...", {
+                                  autoClose: false,
+                                  closeButton: false,
+                                  isLoading: true,
+                                });
 
-                          // If you want only names of sub post offices:
-                          const subPostOfficeNames = subPostOffices.map(
-                            (office) => office.Name
-                          );
+                                const data = await getPincodeDetails(
+                                  pincodeValue
+                                );
 
-                          // Example: set subPostOffice as an array of names
-                          setValue("subPostOffice", subPostOfficeNames);
+                                if (
+                                  data &&
+                                  data[0] &&
+                                  data[0].Status === "Success" &&
+                                  data[0].PostOffice &&
+                                  data[0].PostOffice.length > 0
+                                ) {
+                                  const postOffice = data[0].PostOffice[0];
 
-                          // Show success message with location details
-                          toast.dismiss();
-                          toast.success(
-                            `Location found: ${postOffice.District}, ${postOffice.State}`
-                          );
-                        } else {
-                          // Clear the values if pincode is invalid
-                          setValue("district", "");
-                          setValue("state", "");
-                          setValue("taluk", "");
-                          setValue("subPostOffice", "");
-                          toast.dismiss();
-                          toast.error("Invalid pincode or location not found");
-                        }
-                      } catch (error) {
-                        // Clear the values if there's an error
-                        setValue("district", "");
-                        setValue("state", "");
-                        setValue("taluk", "");
-                        setValue("subPostOffice", "");
-                        toast.dismiss();
-                        toast.error(
-                          "Error fetching location details. Please try again."
-                        );
-                      }
-                    } else {
-                      // Clear the values if pincode is not 6 digits
-                      setValue("district", "");
-                      setValue("state", "");
-                      setValue("taluk", "");
-                      // Don't show any message for incomplete pincode
-                    }
-                  }}
-                />
+                                  setValue("pinDistrict", postOffice.District);
+                                  setValue("pinState", postOffice.State);
+                                  setValue(
+                                    "pinTaluk",
+                                    postOffice.Block || postOffice.District
+                                  );
+                                  //array of sub post offices
+                                  const subPostOffices =
+                                    data[0].PostOffice.filter(
+                                      (office) =>
+                                        office.BranchType === "Sub Post Office"
+                                    );
 
-                <FormField
-                  label="Nearest Landmark"
-                  name="nearestLandmark"
-                  type="text"
-                  control={control}
-                  errors={errors}
-                  placeholder="e.g., Railway Station, Bus Stand, etc."
-                />
-              </div>
+                                  // If you want only names of sub post offices:
+                                  const subPostOfficeNames = subPostOffices.map(
+                                    (office) => office.Name
+                                  );
 
-              {/* Display location details if pincode is valid */}
-              {watch("startPincode")?.length === 6 && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
-                    Location Details
-                  </h4>
-                  {watch("district") && watch("state") ? (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-500">District</p>
-                        <p className="text-sm font-medium">
-                          {watch("district")}
-                        </p>
+                                  // Example: set subPostOffice as an array of names
+                                  setValue(
+                                    "subPostOffice",
+                                    subPostOfficeNames[0]
+                                  );
+
+                                  // Show success message with location details
+                                  toast.dismiss();
+                                  toast.success(
+                                    `Location found: ${postOffice.District}, ${postOffice.State}`
+                                  );
+                                } else {
+                                  // Clear the values if pincode is invalid
+                                  setValue("pinDistrict", "");
+                                  setValue("pinState", "");
+                                  setValue("pinTaluk", "");
+                                  setValue("subPostOffice", "");
+                                  toast.dismiss();
+                                  toast.error(
+                                    "Invalid pincode or location not found"
+                                  );
+                                }
+                              } catch (error) {
+                                // Clear the values if there's an error
+                                setValue("pinDistrict", "");
+                                setValue("pinState", "");
+                                setValue("pinTaluk", "");
+                                setValue("subPostOffice", "");
+                                toast.dismiss();
+                                toast.error(
+                                  "Error fetching location details. Please try again."
+                                );
+                              }
+                            } else {
+                              // Clear the values if pincode is not 6 digits
+                              setValue("pinDistrict", "");
+                              setValue("pinState", "");
+                              setValue("pinTaluk", "");
+                              // Don't show any message for incomplete pincode
+                            }
+                          }}
+                        />
+
+                        <FormField
+                          label="Nearest Landmark"
+                          name="nearestLandmark"
+                          type="text"
+                          control={control}
+                          errors={errors}
+                          placeholder="e.g., Railway Station, Bus Stand, etc."
+                        />
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Taluk/Block</p>
-                        <p className="text-sm font-medium">{watch("taluk")}</p>
+                    )}
+
+                  {/* Display location details if pincode is valid */}
+                  {watch("startPincode")?.length === 6 &&
+                    !["flight", "train"].includes(watch("modeOfTransport")) && (
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">
+                          Location Details
+                        </h4>
+                        {watch("pinDistrict") && watch("pinState") ? (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <p className="text-sm text-gray-500">District</p>
+                              <p className="text-sm font-medium">
+                                {watch("pinDistrict")}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-500">
+                                Taluk/Block
+                              </p>
+                              <p className="text-sm font-medium">
+                                {watch("pinTaluk")}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-500">State</p>
+                              <p className="text-sm font-medium">
+                                {watch("pinState")}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-500">
+                                Sub Post Office
+                              </p>
+                              <p className="text-sm font-medium">
+                                {watch("subPostOffice")}
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <p className="text-sm text-red-600">
+                              Invalid pincode or location not found
+                            </p>
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-500">State</p>
-                        <p className="text-sm font-medium">{watch("state")}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Sub Post Office</p>
-                        <p className="text-sm font-medium">
-                          {watch("subPostOffice")}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <p className="text-sm text-red-600">
-                        Invalid pincode or location not found
-                      </p>
+                    )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
                       <FormField
-                        label="Please enter your origin area details"
-                        name="originArea"
-                        type="text"
+                        label="Expected Travel Date"
+                        name="travelDate"
+                        type="date"
                         control={control}
                         errors={errors}
-                        required={true}
-                        placeholder="Enter your city/town name"
+                        // required={true}
+                        min={new Date().toISOString().split("T")[0]}
+                        className="date-picker"
+                      />
+                    </div>
+                    <div>
+                      <FormField
+                        label="Expected Travel Time"
+                        name="travelTime"
+                        type="time"
+                        control={control}
+                        errors={errors}
+                        // required={true}
+                        className="time-picker"
+                      />
+                    </div>
+                  </div>
+
+                  {watch("modeOfTransport") === "car" && (
+                    <div className="space-y-4">
+                      <FormField
+                        label="Will you be ready for ride sharing with fellow navodayans from your starting point?"
+                        name="readyForRideShare"
+                        type="select"
+                        control={control}
+                        errors={errors}
+                        // required={true}
+                        options={[
+                          { value: "yes", label: "Yes" },
+                          { value: "no", label: "No" },
+                        ]}
+                      />
+
+                      {watch("readyForRideShare") === "yes" && (
+                        <FormField
+                          label="How many people can you accommodate in your car?"
+                          name="rideShareCapacity"
+                          type="number"
+                          control={control}
+                          errors={errors}
+                          // required={true}
+                          min={1}
+                          max={6}
+                        />
+                      )}
+
+                      <FormField
+                        label="Will you need car parking at the venue?"
+                        name="needParking"
+                        type="select"
+                        control={control}
+                        errors={errors}
+                        // required={true}
+                        options={[
+                          { value: "yes", label: "Yes" },
+                          { value: "no", label: "No" },
+                        ]}
                       />
                     </div>
                   )}
-                </div>
-              )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <FormField
-                    label="Expected Travel Date"
-                    name="travelDate"
-                    type="date"
-                    control={control}
-                    errors={errors}
-                    required={true}
-                    min={new Date().toISOString().split("T")[0]}
-                    className="date-picker"
-                  />
-                </div>
-                <div>
-                  <FormField
-                    label="Expected Travel Time"
-                    name="travelTime"
-                    type="time"
-                    control={control}
-                    errors={errors}
-                    required={true}
-                    className="time-picker"
-                  />
-                </div>
-              </div>
+                  {watch("modeOfTransport") &&
+                    watch("modeOfTransport") !== "car" && (
+                      <div className="space-y-4">
+                        <FormField
+                          label="Would you like to connect with other navodayans from your starting point?"
+                          name="wantRideShare"
+                          type="select"
+                          control={control}
+                          errors={errors}
+                          // required={true}
+                          options={[
+                            { value: "yes", label: "Yes" },
+                            { value: "no", label: "No" },
+                          ]}
+                        />
 
-              <FormField
-                label="Mode of Transport"
-                name="modeOfTransport"
-                type="select"
-                control={control}
-                errors={errors}
-                required={true}
-                options={[
-                  { value: "car", label: "Car" },
-                  { value: "train", label: "Train" },
-                  { value: "flight", label: "Flight" },
-                  { value: "bus", label: "Bus" },
-                  { value: "other", label: "Other" },
-                ]}
-              />
-
-              {watch("modeOfTransport") === "car" && (
-                <div className="space-y-4">
-                  <FormField
-                    label="Will you be ready for ride sharing from your starting point?"
-                    name="readyForRideShare"
-                    type="select"
-                    control={control}
-                    errors={errors}
-                    required={true}
-                    options={[
-                      { value: "yes", label: "Yes" },
-                      { value: "no", label: "No" },
-                    ]}
-                  />
-
-                  {watch("readyForRideShare") === "yes" && (
-                    <FormField
-                      label="How many people can you accommodate in your car?"
-                      name="rideShareCapacity"
-                      type="number"
-                      control={control}
-                      errors={errors}
-                      required={true}
-                      min={1}
-                      max={6}
-                    />
-                  )}
+                        {watch("wantRideShare") === "yes" && (
+                          <FormField
+                            label="Number of people in your group"
+                            name="rideShareGroupSize"
+                            type="number"
+                            control={control}
+                            errors={errors}
+                            // required={true}
+                            min={1}
+                            max={6}
+                          />
+                        )}
+                      </div>
+                    )}
 
                   <FormField
-                    label="Will you need car parking at the venue?"
-                    name="needParking"
-                    type="select"
+                    label="Special Requirements for Travel"
+                    name="travelSpecialRequirements"
+                    type="textarea"
                     control={control}
                     errors={errors}
-                    required={true}
-                    options={[
-                      { value: "yes", label: "Yes" },
-                      { value: "no", label: "No" },
-                    ]}
-                  />
-                </div>
-              )}
-
-              {watch("modeOfTransport") !== "car" && (
-                <div className="space-y-4">
-                  <FormField
-                    label="Would you like to connect with other alumni  from your starting point?"
-                    name="wantRideShare"
-                    type="select"
-                    control={control}
-                    errors={errors}
-                    required={true}
-                    options={[
-                      { value: "yes", label: "Yes" },
-                      { value: "no", label: "No" },
-                    ]}
+                    placeholder="Any specific requirements for travel (e.g., wheelchair access, medical conditions, etc.)"
                   />
 
-                  {watch("wantRideShare") === "yes" && (
-                    <FormField
-                      label="Number of people in your group"
-                      name="rideShareGroupSize"
-                      type="number"
-                      control={control}
-                      errors={errors}
-                      required={true}
-                      min={1}
-                      max={6}
-                    />
-                  )}
-                </div>
-              )}
-
-              <FormField
-                label="Special Requirements for Travel"
-                name="travelSpecialRequirements"
-                type="textarea"
-                control={control}
-                errors={errors}
-                placeholder="Any specific requirements for travel (e.g., wheelchair access, medical conditions, etc.)"
-              />
-
-              {/* Show potential group information */}
-              {watch("startPincode") &&
-                watch("district") &&
-                ((watch("modeOfTransport") === "car" &&
-                  watch("readyForRideShare") === "yes") ||
-                  (watch("modeOfTransport") !== "car" &&
-                    watch("wantRideShare") === "yes")) && (
-                  <div className="mt-6">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">
-                      Group Travel Information
-                    </h3>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <p className="text-gray-600 text-sm">
-                        Based on your location ({watch("district")},{" "}
-                        {watch("state")}), you may:
-                      </p>
-                      <ul className="list-disc list-inside text-gray-600 text-sm mt-2 space-y-1">
-                        <li>
-                          Group you with other alumni from {watch("district")}{" "}
-                          district
-                        </li>
-                        <li>Coordinate group transportation arrangements</li>
-                        <li>Share travel details once the group is formed</li>
-                        <li>
-                          Provide pickup points based on the group's location
-                        </li>
-                        {watch("modeOfTransport") === "car" &&
-                          watch("readyForRideShare") === "yes" && (
-                            <li>
-                              Coordinate ride sharing with other alumni in your
-                              area
-                            </li>
-                          )}
-                        {watch("modeOfTransport") !== "car" &&
-                          watch("wantRideShare") === "yes" && (
-                            <li>
-                              Arrange shared transportation from your starting
-                              point
-                            </li>
-                          )}
-                      </ul>
+                  {/* Show potential group information */}
+                  {((watch("modeOfTransport") === "car" &&
+                    watch("readyForRideShare") === "yes") ||
+                    (watch("modeOfTransport") !== "car" &&
+                      watch("wantRideShare") === "yes")) && (
+                    <div className="mt-6">
+                      <h3 className="text-lg font-medium text-gray-900 mb-4">
+                        Group Travel Information
+                      </h3>
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <p className="text-gray-600 text-sm">
+                          Based on your location, we'll:
+                        </p>
+                        <ul className="list-disc list-inside text-gray-600 text-sm mt-2 space-y-1">
+                          <li>Group you with other alumni from your area</li>
+                          <li>Coordinate group transportation arrangements</li>
+                          <li>Share travel details once the group is formed</li>
+                          <li>
+                            Provide pickup points based on the group's location
+                          </li>
+                          {watch("modeOfTransport") === "car" &&
+                            watch("readyForRideShare") === "yes" && (
+                              <li>
+                                Coordinate ride sharing with other alumni in
+                                your area
+                              </li>
+                            )}
+                          {watch("modeOfTransport") !== "car" &&
+                            watch("wantRideShare") === "yes" && (
+                              <li>
+                                Arrange shared transportation from your starting
+                                point
+                              </li>
+                            )}
+                        </ul>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </motion.div>
+              )}
             </div>
           </FormSection>
         )}
@@ -1678,235 +1896,289 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         {/* Accommodation Step */}
         {currentStep === 6 && isAttending && (
           <FormSection title="Accommodation Arrangements">
-            <FormField
-              label="Accommodation Preference"
-              name="accommodation"
-              type="select"
-              control={control}
-              errors={errors}
-              required={true}
-              options={[
-                { value: "not-required", label: "I don't need accommodation" },
-
-                {
-                  value: "provide",
-                  label: "I can provide accommodation to others at my place",
-                },
-                {
-                  value: "need",
-                  label:
-                    "Please connect me with alumni who is providing accomodation at their place",
-                },
-                {
-                  value: "discount-hotel",
-                  label: "I need discounted hotel booking",
-                },
-              ]}
-            />
-
-            {accommodation === "provide" && (
-              <>
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-                  <p className="text-yellow-800 text-sm">
-                    Note: The accommodation must be within 25 km radius of CIAL
-                    Convention Center (our venue) to be considered for group
-                    arrangements.
+            <div className="space-y-6">
+              <div className="flex items-start mb-4">
+                <div className="flex items-center h-5">
+                  <input
+                    id="planAccommodation"
+                    type="checkbox"
+                    className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    checked={watch("planAccommodation")}
+                    onChange={(e) =>
+                      setValue("planAccommodation", e.target.checked)
+                    }
+                  />
+                </div>
+                <div className="ml-3 text-sm">
+                  <label
+                    htmlFor="planAccommodation"
+                    className="font-medium text-gray-900"
+                  >
+                    Accommodation planning for UNMA Meet 2025
+                  </label>
+                  <p className="text-gray-500">
+                    This information will assist us in coordinating
+                    accommodation arrangements for participants attending the
+                    meet. We kindly request both those in need of accommodation
+                    and those willing to provide accommodation to submit their
+                    details accordingly.
                   </p>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {watch("planAccommodation") && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="space-y-6"
+                >
                   <FormField
-                    label="Accommodation Location Pincode"
-                    name="accommodationPincode"
-                    type="text"
+                    label="Accommodation Preference"
+                    name="accommodation"
+                    type="select"
                     control={control}
                     errors={errors}
-                    required={true}
-                    placeholder="Enter your accommodation location pincode"
-                    pattern="[0-9]{6}"
-                    maxLength={6}
-                    onChange={async (e) => {
-                      const pincodeValue = e.target.value;
-                      if (pincodeValue.length === 6) {
-                        try {
-                          // Show loading state
-                          toast.info("Fetching location details...", {
-                            autoClose: false,
-                            closeButton: false,
-                            isLoading: true,
-                          });
-
-                          const data = await getPincodeDetails(pincodeValue);
-
-                          if (
-                            data &&
-                            data[0] &&
-                            data[0].Status === "Success" &&
-                            data[0].PostOffice &&
-                            data[0].PostOffice.length > 0
-                          ) {
-                            const postOffice = data[0].PostOffice[0];
-
-                            setValue(
-                              "accommodationDistrict",
-                              postOffice.District
-                            );
-                            setValue("accommodationState", postOffice.State);
-                            setValue(
-                              "accommodationTaluk",
-                              postOffice.Block || postOffice.District
-                            );
-                            //array of sub post offices
-                            const subPostOffices = data[0].PostOffice.filter(
-                              (office) =>
-                                office.BranchType === "Sub Post Office"
-                            );
-
-                            // If you want only names of sub post offices:
-                            const subPostOfficeNames = subPostOffices.map(
-                              (office) => office.Name
-                            );
-
-                            // Example: set subPostOffice as an array of names
-                            setValue(
-                              "accommodationSubPostOffice",
-                              subPostOfficeNames
-                            );
-
-                            // Show success message with location details
-                            toast.dismiss();
-                            toast.success(
-                              `Location found: ${postOffice.District}, ${postOffice.State}`
-                            );
-                          } else {
-                            // Clear the values if pincode is invalid
-                            setValue("accommodationDistrict", "");
-                            setValue("accommodationState", "");
-                            setValue("accommodationTaluk", "");
-                            setValue("accommodationSubPostOffice", "");
-                            toast.dismiss();
-                            toast.error(
-                              "Invalid pincode or location not found"
-                            );
-                          }
-                        } catch (error) {
-                          // Clear the values if there's an error
-                          setValue("accommodationDistrict", "");
-                          setValue("accommodationState", "");
-                          setValue("accommodationTaluk", "");
-                          setValue("accommodationSubPostOffice", "");
-                          toast.dismiss();
-                          toast.error(
-                            "Error fetching location details. Please try again."
-                          );
-                        }
-                      } else {
-                        // Clear the values if pincode is not 6 digits
-                        setValue("accommodationDistrict", "");
-                        setValue("accommodationState", "");
-                        setValue("accommodationTaluk", "");
-                        setValue("accommodationSubPostOffice", "");
-                        // Don't show any message for incomplete pincode
-                      }
-                    }}
+                    // required={true}
+                    options={[
+                      {
+                        value: "not-required",
+                        label: "I don't need accommodation",
+                      },
+                      {
+                        value: "provide",
+                        label:
+                          "I can provide accommodation to others at my place",
+                      },
+                      {
+                        value: "need",
+                        label:
+                          "Please connect me with alumni who is providing accommodation at their place",
+                      },
+                      {
+                        value: "discount-hotel",
+                        label: "I need discounted hotel booking",
+                      },
+                    ]}
                   />
 
-                  <FormField
-                    label="Nearest Landmark"
-                    name="accommodationLandmark"
-                    type="text"
-                    control={control}
-                    errors={errors}
-                    placeholder="e.g., Railway Station, Bus Stand, etc."
-                  />
-                </div>
-
-                {/* Display location details if pincode is valid */}
-                {watch("accommodationPincode")?.length === 6 && (
-                  <div className="bg-gray-50 p-4 rounded-lg mt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">
-                      Location Details
-                    </h4>
-                    {watch("accommodationDistrict") &&
-                    watch("accommodationState") ? (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <p className="text-sm text-gray-500">District</p>
-                          <p className="text-sm font-medium">
-                            {watch("accommodationDistrict")}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">Taluk/Block</p>
-                          <p className="text-sm font-medium">
-                            {watch("accommodationTaluk")}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">State</p>
-                          <p className="text-sm font-medium">
-                            {watch("accommodationState")}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500">
-                            Sub Post Office
-                          </p>
-                          <p className="text-sm font-medium">
-                            {watch("accommodationSubPostOffice")}
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <p className="text-sm text-red-600">
-                          Invalid pincode or location not found
+                  {accommodation === "provide" && (
+                    <>
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                        <p className="text-yellow-800 text-sm">
+                          Note: The accommodation must be within 25 km radius of
+                          CIAL Convention Center (our venue) to be considered
+                          for group arrangements.
                         </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <FormField
-                          label="Please enter your accommodation area details"
-                          name="accommodationArea"
+                          label="Accommodation Location Pincode"
+                          name="accommodationPincode"
                           type="text"
                           control={control}
                           errors={errors}
-                          required={true}
-                          placeholder="Enter your city/town name"
+                          // required={true}
+                          placeholder="Enter your accommodation location pincode"
+                          pattern="[0-9]{6}"
+                          maxLength={6}
+                          onChange={async (e) => {
+                            const pincodeValue = e.target.value;
+                            if (pincodeValue.length === 6) {
+                              try {
+                                // Show loading state
+                                toast.info("Fetching location details...", {
+                                  autoClose: false,
+                                  closeButton: false,
+                                  isLoading: true,
+                                });
+
+                                const data = await getPincodeDetails(
+                                  pincodeValue
+                                );
+
+                                if (
+                                  data &&
+                                  data[0] &&
+                                  data[0].Status === "Success" &&
+                                  data[0].PostOffice &&
+                                  data[0].PostOffice.length > 0
+                                ) {
+                                  const postOffice = data[0].PostOffice[0];
+
+                                  setValue(
+                                    "accommodationDistrict",
+                                    postOffice.District
+                                  );
+                                  setValue(
+                                    "accommodationState",
+                                    postOffice.State
+                                  );
+                                  setValue(
+                                    "accommodationTaluk",
+                                    postOffice.Block || postOffice.District
+                                  );
+                                  //array of sub post offices
+                                  const subPostOffices =
+                                    data[0].PostOffice.filter(
+                                      (office) =>
+                                        office.BranchType === "Sub Post Office"
+                                    );
+
+                                  // If you want only names of sub post offices:
+                                  const subPostOfficeNames = subPostOffices.map(
+                                    (office) => office.Name
+                                  );
+
+                                  // Example: set subPostOffice as an array of names
+                                  setValue(
+                                    "accommodationSubPostOffice",
+                                    subPostOfficeNames[0]
+                                  );
+
+                                  // Show success message with location details
+                                  toast.dismiss();
+                                  toast.success(
+                                    `Location found: ${postOffice.District}, ${postOffice.State}`
+                                  );
+                                } else {
+                                  // Clear the values if pincode is invalid
+                                  setValue("accommodationDistrict", "");
+                                  setValue("accommodationState", "");
+                                  setValue("accommodationTaluk", "");
+                                  setValue("accommodationSubPostOffice", "");
+                                  toast.dismiss();
+                                  toast.error(
+                                    "Invalid pincode or location not found"
+                                  );
+                                }
+                              } catch (error) {
+                                // Clear the values if there's an error
+                                setValue("accommodationDistrict", "");
+                                setValue("accommodationState", "");
+                                setValue("accommodationTaluk", "");
+                                setValue("accommodationSubPostOffice", "");
+                                toast.dismiss();
+                                toast.error(
+                                  "Error fetching location details. Please try again."
+                                );
+                              }
+                            } else {
+                              // Clear the values if pincode is not 6 digits
+                              setValue("accommodationDistrict", "");
+                              setValue("accommodationState", "");
+                              setValue("accommodationTaluk", "");
+                              setValue("accommodationSubPostOffice", "");
+                              // Don't show any message for incomplete pincode
+                            }
+                          }}
+                        />
+
+                        <FormField
+                          label="Nearest Landmark"
+                          name="accommodationLandmark"
+                          type="text"
+                          control={control}
+                          errors={errors}
+                          placeholder="e.g., Railway Station, Bus Stand, etc."
                         />
                       </div>
-                    )}
-                  </div>
-                )}
 
-                <FormField
-                  label="How many people can you accommodate?"
-                  name="accommodationCapacity"
-                  type="number"
-                  control={control}
-                  errors={errors}
-                  required={true}
-                  min={1}
-                  valueAsNumber={true}
-                />
+                      {/* Display location details if pincode is valid */}
+                      {watch("accommodationPincode")?.length === 6 && (
+                        <div className="bg-gray-50 p-4 rounded-lg mt-4">
+                          <h4 className="text-sm font-medium text-gray-700 mb-2">
+                            Location Details
+                          </h4>
+                          {watch("accommodationDistrict") &&
+                          watch("accommodationState") ? (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                              <div>
+                                <p className="text-sm text-gray-500">
+                                  District
+                                </p>
+                                <p className="text-sm font-medium">
+                                  {watch("accommodationDistrict")}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-500">
+                                  Taluk/Block
+                                </p>
+                                <p className="text-sm font-medium">
+                                  {watch("accommodationTaluk")}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-500">State</p>
+                                <p className="text-sm font-medium">
+                                  {watch("accommodationState")}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-500">
+                                  Sub Post Office
+                                </p>
+                                <p className="text-sm font-medium">
+                                  {watch("accommodationSubPostOffice")}
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              <p className="text-sm text-red-600">
+                                Invalid pincode or location not found
+                              </p>
+                              <FormField
+                                label="Please enter your accommodation area details"
+                                name="accommodationArea"
+                                type="text"
+                                control={control}
+                                errors={errors}
+                                // required={true}
+                                placeholder="Enter your city/town name"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-                <FormField
-                  label="Your Accommodation Location"
-                  name="accommodationLocation"
-                  type="text"
-                  control={control}
-                  errors={errors}
-                  required={true}
-                  placeholder="Enter the exact location/address of your accommodation"
-                />
-              </>
-            )}
+                      <FormField
+                        label="How many people can you accommodate?"
+                        name="accommodationCapacity"
+                        type="number"
+                        control={control}
+                        errors={errors}
+                        // required={true}
+                        min={1}
+                        valueAsNumber={true}
+                      />
 
-            <FormField
-              label="Additional Accommodation Remarks"
-              name="accommodationRemarks"
-              type="textarea"
-              control={control}
-              errors={errors}
-              placeholder="Any specific accommodation requirements or information"
-            />
+                      <FormField
+                        label="Your Accommodation Location"
+                        name="accommodationLocation"
+                        type="text"
+                        control={control}
+                        errors={errors}
+                        // required={true}
+                        placeholder="Enter the exact location/address of your accommodation"
+                      />
+                    </>
+                  )}
+
+                  <FormField
+                    label="Additional Accommodation Remarks"
+                    name="accommodationRemarks"
+                    type="textarea"
+                    control={control}
+                    errors={errors}
+                    placeholder="Any specific accommodation requirements or information"
+                  />
+                </motion.div>
+              )}
+            </div>
           </FormSection>
         )}
 
@@ -1915,27 +2187,15 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
           <FormSection title="Optional Information">
             <div className="space-y-6">
               {/* Spouse Navodayan */}
-              <FormField
-                label="Is your spouse a Navodayan?"
-                name="spouseNavodayan"
-                type="select"
-                control={control}
-                errors={errors}
-                options={[
-                  { value: "", label: "Select an option" },
-                  { value: "Yes", label: "Yes" },
-                  { value: "No", label: "No" },
-                ]}
-              />
 
               {/* UNMA Family Groups */}
               <FormField
-                label="Are you part of UNMA family groups?"
+                label="Are you part of UNMA family whatsapp groups?"
                 name="unmaFamilyGroups"
                 type="select"
                 control={control}
                 errors={errors}
-                required={true}
+                // required={true}
                 options={[
                   { value: "", label: "Select an option" },
                   { value: "Yes", label: "Yes" },
@@ -2053,6 +2313,20 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                   ))}
                 </div>
               </div>
+              <hr />
+
+              <FormField
+                label="Is your spouse a Navodayan?"
+                name="spouseNavodayan"
+                type="select"
+                control={control}
+                errors={errors}
+                options={[
+                  { value: "", label: "Select an option" },
+                  { value: "Yes", label: "Yes" },
+                  { value: "No", label: "No" },
+                ]}
+              />
 
               {/* T-Shirt Interest */}
               <div className="space-y-4">
@@ -2062,7 +2336,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                   type="select"
                   control={control}
                   errors={errors}
-                  required={true}
+                  // required={true}
                   options={[
                     { value: "", label: "Select an option" },
                     { value: "yes", label: "Yes" },
@@ -2325,7 +2599,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
               message={alertDialogConfig.message}
               confirmText="Proceed with current amount"
               cancelText="Add more amount"
-              type="warning"
+              type="info"
             />
           </FormSection>
         )}

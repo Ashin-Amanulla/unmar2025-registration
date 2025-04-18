@@ -65,7 +65,13 @@ export default function useRegistration() {
     // Function to submit registration
     const submitRegistrationMutation = useMutation({
         mutationFn: async (formData) => {
-            const response = await fetch('/api/registrations', {
+            const { registrationId, registrationToken, action = 'create' } = formData;
+
+            const endpoint = action === 'update' && registrationId
+                ? `/api/registrations/step/${registrationId}`
+                : '/api/registrations/step/new';
+
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -81,11 +87,14 @@ export default function useRegistration() {
             return response.json();
         },
         onSuccess: (data) => {
-            toast.success('Registration submitted successfully');
-            return data;
+            if (data.status === 'success') {
+                return data;
+            }
+            throw new Error(data.message || 'Registration failed');
         },
         onError: (error) => {
             toast.error(error.message || 'Registration failed');
+            throw error;
         },
     });
 

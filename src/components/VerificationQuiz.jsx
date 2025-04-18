@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 const question = {
   id: 1,
   question:
-    "Please select the 3 most relevant options related to your 7 years JNV life:",
+    "Please select the 3 most relevant options related to your  JNV life:",
   options: [
     "Mess Hall",
     "Drill",
@@ -25,7 +25,6 @@ const question = {
     "Residence",
     "Dormitory",
     "Vindya",
-    
   ],
   correctAnswers: [
     "Mess Hall",
@@ -41,7 +40,6 @@ const question = {
     "Principal",
     "Assembly",
     "School Captain",
-
   ], // These are the correct options
   requiredCorrect: 3, // Number of correct answers needed to pass
 };
@@ -114,7 +112,7 @@ const VerificationQuiz = ({ onQuizComplete }) => {
   return (
     <div className="bg-white p-6 rounded-lg shadow-md">
       <h3 className="text-lg font-semibold text-gray-800 mb-4">
-        Verification Quiz
+        
       </h3>
       <p className="text-sm text-gray-600 mb-6">
         Please select exactly 3 options that best represent your JNV experience.
@@ -129,7 +127,9 @@ const VerificationQuiz = ({ onQuizComplete }) => {
               key={index}
               className={`flex items-center p-3 space-x-3 cursor-pointer border rounded-md 
                 ${
-                  showResults && question.correctAnswers.includes(option)
+                  showResults &&
+                  selectedAnswers.includes(option) &&
+                  question.correctAnswers.includes(option)
                     ? "border-green-500 bg-green-50"
                     : ""
                 }
@@ -147,6 +147,8 @@ const VerificationQuiz = ({ onQuizComplete }) => {
                 }
                 ${
                   !showResults && !selectedAnswers.includes(option)
+                    ? "border-gray-200"
+                    : showResults && !selectedAnswers.includes(option)
                     ? "border-gray-200"
                     : ""
                 }
@@ -170,9 +172,11 @@ const VerificationQuiz = ({ onQuizComplete }) => {
                 className="form-checkbox h-4 w-4 text-blue-600"
               />
               <span className="text-gray-700">{option}</span>
-              {showResults && question.correctAnswers.includes(option) && (
-                <span className="ml-auto text-green-600">✓ Correct</span>
-              )}
+              {showResults &&
+                selectedAnswers.includes(option) &&
+                question.correctAnswers.includes(option) && (
+                  <span className="ml-auto text-green-600">✓ Correct</span>
+                )}
               {showResults &&
                 selectedAnswers.includes(option) &&
                 !question.correctAnswers.includes(option) && (

@@ -284,15 +284,30 @@ export const OtpInput = ({ onVerify, email, phone }) => {
       const response = await registrationsApi.verifyOtp(email, phone, otp);
 
       if (response.status === "success") {
+        // Clear any existing registration data from localStorage to ensure a fresh start
+        const storageKeys = Object.keys(localStorage);
+        storageKeys.forEach((key) => {
+          if (key.includes("registration-") && key.includes("-id")) {
+            console.log(
+              `Clearing existing registration ID from localStorage: ${key}`
+            );
+            localStorage.removeItem(key);
+          }
+        });
+
+        console.log("OTP verified successfully, returned data:", response);
+
+        // Set verification token and optionally registrationId if provided
         onVerify(true, response.verificationToken, response.registrationId);
         toast.success("Email verified successfully!");
       } else {
-        setError("Invalid OTP. Please try again.");
-        toast.error("Invalid OTP. Please try again.");
+        setError(response.message || "Invalid OTP. Please try again.");
+        toast.error(response.message || "Invalid OTP. Please try again.");
       }
     } catch (error) {
       console.error("Error verifying OTP:", error);
-      setError(error.response?.message || "Invalid OTP. Please try again.");
+      setError(error.message || "Invalid OTP. Please try again.");
+      toast.error(error.message || "Invalid OTP. Please try again.");
     } finally {
       setIsLoading(false);
     }

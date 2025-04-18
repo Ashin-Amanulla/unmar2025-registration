@@ -309,3 +309,23 @@ export const PROFESSION_OPTIONS = [
   { value: "Yoga Instructor", label: "Yoga Instructor" },
   { value: "Zoologist", label: "Zoologist" }
 ];
+
+export const EVENT_PARTICIPATION_OPTIONS = [
+  { value: "none", label: "None" },
+  { value: "bookRelease", label: "Book Release" },
+  { value: "businessStalls", label: "Business Stalls" },
+  { value: "catering", label: "Catering" },
+
+  { value: "cinemaRelease", label: "Cinema Release" },
+  { value: "compliments", label: "Compliments" },
+  { value: "culturalParticipant", label: "Cultural Program (as Participant)" },
+  { value: "culturalTrainer", label: "Cultural Program (as Trainer)" },
+  { value: "artCraftBooks", label: "Display art & craft or books" },
+  { value: "displayCinema", label: "Display Cinema" },
+  { value: "liveStreaming", label: "Live Streaming" },
+  { value: "photography", label: "Photography" },
+  { value: "videography", label: "Videography" },
+  { value: "volunteering", label: "Volunteering" },
+  { value: "other", label: "Other" },
+
+]

@@ -7,6 +7,8 @@ import { RegistrationSchemas } from "../../zod-form-validators/registrationform"
 import { useRegistration } from "../../hooks";
 import { getPincodeDetails } from "../../api/pincodeApi";
 import { usePayment } from "../../hooks/usePayment";
+import SponsorshipCards from "./SponsorshipCards";
+import registrationsApi from "../../api/registrationsApi";
 
 import { KERALA_DISTRICTS } from "../../assets/data";
 import {
@@ -95,33 +97,39 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
       whatsappNumber: "",
       country: "India",
       stateUT: "",
+      district: "",
+      bloodGroup: "",
 
       // Professional
       schoolsWorked: "",
       yearsOfWorking: "",
       currentPosition: "",
+      subject: "",
+      otherPosition: "",
+      areaOfExpertise: "",
+      additionalDetails: "",
 
       // Event attendance
       isAttending: true,
       attendees: {
-        adults: { veg: 0, nonVeg: 0 },
+        adults: { veg: 0, nonVeg: 1 },
         teens: { veg: 0, nonVeg: 0 },
         children: { veg: 0, nonVeg: 0 },
         toddlers: { veg: 0, nonVeg: 0 },
       },
-      eventContribution: [],
-      contributionDetails: "",
+      eventParticipation: [],
+      participationDetails: "",
 
       // Sponsorship
-      interestedInSponsorship: false,
+      interestedInSponsorship: true,
       sponsorshipType: [],
       sponsorshipDetails: "",
 
       // Transportation
       startPincode: "",
-      district: "",
-      state: "",
-      taluk: "",
+      pinDistrict: "",
+      pinState: "",
+      pinTaluk: "",
       originArea: "",
       nearestLandmark: "",
       travelDate: "",
@@ -141,7 +149,6 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
       accommodationRemarks: "",
 
       // Optional
-      bloodGroup: "",
       mentorshipInterest: false,
       mentorshipAreas: [],
 
@@ -159,10 +166,25 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
   const willContribute = watch("willContribute");
   const modeOfTransport = watch("modeOfTransport");
 
-  // Load saved data from local storage
+  // Add new state for registration ID and token
+  const [registrationId, setRegistrationId] = useState(null);
+  const [registrationToken, setRegistrationToken] = useState(null);
+  const [verificationToken, setVerificationToken] = useState(null);
+
+  // Load saved data from local storage including registration ID and token
   useEffect(() => {
     const savedRegistrationData = localStorage.getItem(storageKey);
     const savedStep = localStorage.getItem(`${storageKey}-step`);
+    const savedToken = localStorage.getItem(`${storageKey}-token`);
+    const savedId = localStorage.getItem(`${storageKey}-id`);
+
+    console.log("Loading from localStorage:", {
+      storageKey,
+      tokenKey: `${storageKey}-token`,
+      idKey: `${storageKey}-id`,
+      savedToken,
+      savedId,
+    });
 
     if (savedRegistrationData) {
       try {
@@ -177,9 +199,35 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
           setEmailVerified(parsedData.emailVerified);
           setCaptchaVerified(parsedData.captchaVerified);
 
+          // Restore registration ID and token
+          if (savedToken) {
+            console.log(
+              "Restoring verification token from localStorage:",
+              savedToken
+            );
+            setVerificationToken(savedToken);
+          }
+
+          if (savedId) {
+            console.log(
+              "Restoring registration ID from localStorage:",
+              savedId
+            );
+            setRegistrationId(savedId);
+          }
+
           // Restore step
           if (savedStep) {
             setCurrentStep(parseInt(savedStep, 10));
+          }
+
+          // If there's existing contribution data, restore the total amount
+          if (
+            parsedData.contributionAmount > 0 &&
+            parsedData.paymentStatus === "Completed"
+          ) {
+            setHasPreviousContribution(true);
+            setPreviousContributionAmount(parsedData.contributionAmount);
           }
 
           toast.info("Previous form data restored");
@@ -197,8 +245,24 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
       const formData = getValues();
       localStorage.setItem(storageKey, JSON.stringify(formData));
       localStorage.setItem(`${storageKey}-step`, currentStep.toString());
+
+      // Save registration ID and token if available
+      if (registrationId) {
+        localStorage.setItem(`${storageKey}-id`, registrationId);
+      }
+      if (verificationToken) {
+        localStorage.setItem(`${storageKey}-token`, verificationToken);
+      }
     }
-  }, [watch(), currentStep, isDirty, getValues, storageKey]);
+  }, [
+    watch(),
+    currentStep,
+    isDirty,
+    getValues,
+    storageKey,
+    registrationId,
+    verificationToken,
+  ]);
 
   // Update verification states in form data
   useEffect(() => {
@@ -207,9 +271,22 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
   }, [emailVerified, captchaVerified, setValue]);
 
   // Email verification handler
-  const handleEmailVerified = (status) => {
+  const handleEmailVerified = (status, token, id) => {
     setEmailVerified(status);
     setValue("emailVerified", status);
+
+    // Store verification token and registration ID if provided
+    if (token) {
+      console.log("Setting verification token:", token);
+      setVerificationToken(token);
+      localStorage.setItem(`${storageKey}-token`, token);
+    }
+
+    if (id) {
+      console.log("Setting registration ID from OTP verification:", id);
+      setRegistrationId(id);
+      localStorage.setItem(`${storageKey}-id`, id);
+    }
   };
 
   // CAPTCHA verification handler
@@ -260,15 +337,22 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
           toast.error("Please add at least one attendee");
           return false;
         }
+
+        fieldsToValidate.push("eventParticipation");
+
+        // If participation details are required based on selection
+        const eventParticipation = watch("eventParticipation") || [];
+        if (
+          eventParticipation.length > 0 &&
+          !eventParticipation.includes("none")
+        ) {
+          fieldsToValidate.push("participationDetails");
+        }
       }
       return true;
     } else if (currentStep === 4) {
       // Sponsorship
       fieldsToValidate = ["interestedInSponsorship"];
-
-      if (watch("interestedInSponsorship")) {
-        fieldsToValidate.push("sponsorshipType");
-      }
     } else if (currentStep === 5) {
       // Transportation
       if (isAttending) {
@@ -296,14 +380,10 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
       }
     } else if (currentStep === 6) {
       // Accommodation
-      if (isAttending) {
-        fieldsToValidate = ["accommodation"];
+      fieldsToValidate = ["accommodation"];
 
-        if (accommodation === "provide") {
-          fieldsToValidate.push("accommodationCapacity");
-        }
-      } else {
-        return true;
+      if (accommodation === "provide") {
+        fieldsToValidate.push("accommodationCapacity");
       }
     } else if (currentStep === 7) {
       // Optional fields - no required validation
@@ -321,13 +401,234 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
     return await trigger(fieldsToValidate);
   };
 
-  // Handle next button click
+  // Helper function to get step-specific data
+  const getStepData = (stepNumber, formData) => {
+    // Prepare basic structured data for all steps
+    const structuredData = {
+      registrationType: "Staff",
+      formDataStructured: {
+        verification: {
+          emailVerified: formData.emailVerified,
+          captchaVerified: formData.captchaVerified,
+          email: formData.email,
+          contactNumber: formData.contactNumber,
+        },
+        personalInfo: {
+          name: formData.name,
+          email: formData.email,
+          contactNumber: formData.contactNumber,
+          whatsappNumber: formData.whatsappNumber || formData.contactNumber,
+          country: formData.country,
+          stateUT: formData.stateUT,
+          district: formData.district,
+          bloodGroup: formData.bloodGroup,
+        },
+        professional: {
+          schoolsWorked: formData.schoolsWorked,
+          yearsOfWorking: formData.yearsOfWorking,
+          currentPosition: formData.currentPosition,
+          subject: formData.subject,
+          otherPosition: formData.otherPosition,
+          areaOfExpertise: formData.areaOfExpertise,
+          additionalDetails: formData.additionalDetails,
+        },
+        eventAttendance: {
+          isAttending: formData.isAttending,
+          attendees: formData.attendees,
+          eventParticipation: formData.eventParticipation,
+          participationDetails: formData.participationDetails,
+        },
+        sponsorship: {
+          interestedInSponsorship: formData.interestedInSponsorship,
+          sponsorshipTier: formData.sponsorshipType
+            ? formData.sponsorshipType.join(", ")
+            : "",
+          sponsorshipDetails: formData.sponsorshipDetails,
+        },
+        transportation: {
+          startPincode: formData.startPincode,
+          pinDistrict: formData.pinDistrict,
+          pinState: formData.pinState,
+          pinTaluk: formData.pinTaluk,
+          subPostOffice: formData.subPostOffice,
+          originArea: formData.originArea,
+          nearestLandmark: formData.nearestLandmark,
+          travelDate: formData.travelDate,
+          travelTime: formData.travelTime,
+          modeOfTransport: formData.modeOfTransport,
+          readyForRideShare: formData.readyForRideShare,
+          rideShareCapacity: formData.rideShareCapacity,
+          needParking: formData.needParking,
+          wantRideShare: formData.wantRideShare,
+          rideShareGroupSize: formData.rideShareGroupSize,
+          travelSpecialRequirements: formData.travelSpecialRequirements,
+        },
+        accommodation: {
+          accommodation: formData.accommodation,
+          accommodationPincode: formData.accommodationPincode,
+          accommodationDistrict: formData.accommodationDistrict,
+          accommodationState: formData.accommodationState,
+          accommodationTaluk: formData.accommodationTaluk,
+          accommodationSubPostOffice: formData.accommodationSubPostOffice,
+          accommodationLandmark: formData.accommodationLandmark,
+          accommodationArea: formData.accommodationArea,
+          accommodationCapacity: formData.accommodationCapacity,
+          accommodationLocation: formData.accommodationLocation,
+          accommodationRemarks: formData.accommodationRemarks,
+        },
+        financial: {
+          willContribute: formData.willContribute || hasPreviousContribution,
+          contributionAmount:
+            previousContributionAmount || formData.contributionAmount,
+          proposedAmount: formData.proposedAmount,
+          paymentStatus: hasPreviousContribution ? "Completed" : "Pending",
+          paymentId: formData.paymentId,
+          paymentDetails: hasPreviousContribution
+            ? `Payment of ₹${previousContributionAmount} received`
+            : "",
+          paymentRemarks: formData.paymentRemarks,
+        },
+      },
+    };
+
+    // For financial step, ensure the contribution amount is correctly set
+    if (stepNumber === 7) {
+      structuredData.formDataStructured.financial.contributionAmount =
+        previousContributionAmount || formData.contributionAmount;
+    }
+
+    // For logging purposes only
+    const stepNames = {
+      1: "personalInfo",
+      2: "professional",
+      3: "eventAttendance",
+      4: "sponsorship",
+      5: "transportation",
+      6: "accommodation",
+      7: "financial",
+    };
+
+    // Return data with metadata for logging
+    return {
+      ...structuredData,
+      _stepName: stepNames[stepNumber] || "verification", // For console logging only
+    };
+  };
+
+  // Function to save step data to backend
+  const saveStepToBackend = async (stepNumber, formData) => {
+    try {
+      // Get step-specific data to send to backend
+      const stepData = getStepData(stepNumber, formData);
+
+      // For first step after verification, always create a new registration
+      const idToUse = stepNumber === 1 ? "new" : registrationId || "new";
+      console.log(`Saving step ${stepNumber} with ID:`, idToUse);
+
+      const payload = {
+        step: stepNumber,
+        stepData,
+        verificationToken,
+      };
+
+      // Send data to backend API
+      const response = await registrationsApi.create(idToUse, payload);
+
+      console.log("API response:", response);
+
+      // Update registration ID if this is a new registration
+      if (response.data?.registrationId) {
+        const newId = response.data.registrationId;
+        console.log("Setting registration ID:", newId);
+        setRegistrationId(newId);
+        localStorage.setItem(`${storageKey}-id`, newId);
+      }
+
+      // Show success toast
+      toast.success(`Step ${stepNumber} saved successfully`);
+
+      return true;
+    } catch (error) {
+      console.error("Error saving step:", error);
+
+      // If registration not found, try creating a new one
+      if (error.message === "Registration not found") {
+        console.log("Attempting to create new registration instead of update");
+        try {
+          const response = await submitRegistration({
+            step: stepNumber,
+            stepData: getStepData(stepNumber, formData),
+            verificationToken,
+            registrationId: "new",
+          });
+
+          if (response.data?.registrationId) {
+            const newId = response.data.registrationId;
+            console.log("Created new registration with ID:", newId);
+            setRegistrationId(newId);
+            localStorage.setItem(`${storageKey}-id`, newId);
+            toast.success(`Step ${stepNumber} saved successfully`);
+            return true;
+          }
+        } catch (retryError) {
+          console.error("Error creating new registration:", retryError);
+        }
+      }
+
+      // Handle different error types
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message);
+      } else if (error.message) {
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to save this step. Please try again.");
+      }
+
+      return false;
+    }
+  };
+
+  // Modify handleNextStep to include better error handling
   const handleNextStep = async () => {
     const isStepValid = await validateCurrentStep();
 
     if (isStepValid) {
+      // Save current step to backend before moving to next
+      if (currentStep > 0) {
+        // Skip saving verification step
+        const formData = getValues();
+        const stepData = getStepData(currentStep, formData);
+
+        console.log(`Saving step ${currentStep} (${stepData._stepName}):`);
+        console.log("- Current registration ID:", registrationId);
+        console.log("- Form data:", formData);
+        console.log(
+          "- Structured section:",
+          stepData.formDataStructured[stepData._stepName]
+        );
+
+        // For first step after verification, always create a new registration
+        if (currentStep === 1) {
+          // Clear any existing registration ID to force creation of a new one
+          console.log(
+            "First step - creating a new registration instead of updating"
+          );
+          setRegistrationId(null);
+          localStorage.removeItem(`${storageKey}-id`);
+        }
+
+        const saveSuccess = await saveStepToBackend(currentStep, formData);
+
+        if (!saveSuccess) {
+          // Don't proceed if save failed
+          return;
+        }
+      }
+
+      // Proceed to next step
       setCurrentStep((prevStep) => prevStep + 1);
       window.scrollTo(0, 0);
+      toast.success("Progress saved successfully!");
     }
   };
 
@@ -356,20 +657,25 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
     }
   }, [currentStep]);
 
-
-
-  // Handle form submission
+  // Modify onSubmit to use registration ID
   const onSubmit = async (data) => {
     try {
-    setIsSubmitting(true);
+      setIsSubmitting(true);
       console.log("Submitting registration data:", data);
 
-      // Submit registration data
-      // await submitRegistration(data);
+      // Save final step
+      const saveSuccess = await saveStepToBackend(currentStep, data);
+
+      if (!saveSuccess) {
+        setIsSubmitting(false);
+        return;
+      }
 
       // Clear saved data
       localStorage.removeItem(storageKey);
       localStorage.removeItem(`${storageKey}-step`);
+      localStorage.removeItem(`${storageKey}-token`);
+      localStorage.removeItem(`${storageKey}-id`);
 
       // Show success message
       toast.success("🎉 Registration completed successfully!");
@@ -397,16 +703,15 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
     try {
       // Get form data
       const formData = getValues();
-      console.log("Submitting form with data:", formData);
 
-      // Directly call onSubmit with form data
+      // Call onSubmit with the form data
       await onSubmit(formData);
     } catch (error) {
       console.error("Form submission error:", error);
       toast.error("Form submission failed. Please try again.");
     }
   };
-    // Handle payment processing
+  // Handle payment processing
   const handlePayment = async () => {
     try {
       const contributionAmount = watch("contributionAmount") || 0;
@@ -511,6 +816,12 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                 required={true}
                 disabled={emailVerified}
               />
+              <label
+                htmlFor="contactNumber"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Whatsapp Number
+              </label>
               <PhoneInput
                 country={"in"}
                 value={watch("contactNumber")}
@@ -575,7 +886,7 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
               )}
 
               {!captchaVerified && (
-              <CaptchaVerification onVerify={handleCaptchaVerified} />
+                <CaptchaVerification onVerify={handleCaptchaVerified} />
               )}
 
               {captchaVerified && (
@@ -614,9 +925,9 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
               required={true}
             />
 
-<div className="mb-4">
+            <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Contact Number *
+                Whatsapp Number
               </label>
               <PhoneInput
                 country={"in"}
@@ -638,6 +949,7 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                 disableSearchIcon={false}
                 searchNotFound="No country found"
                 specialLabel=""
+                disabled={emailVerified}
                 enableLongNumbers={true}
                 countryCodeEditable={false}
                 preferredCountries={["in", "us", "gb", "ae"]}
@@ -651,7 +963,7 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                WhatsApp Number (if different)
+                Contact Number (if different from whatsapp number)
               </label>
               <PhoneInput
                 country={"in"}
@@ -703,7 +1015,7 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
             />
 
             <FormField
-              label="Country"
+              label="Current country of residence"
               name="country"
               type="select"
               control={control}
@@ -719,7 +1031,7 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
 
             {watch("country") === "IN" && (
               <FormField
-                label="State/UT"
+                label="Current State/UT of residence"
                 name="stateUT"
                 type="select"
                 control={control}
@@ -728,9 +1040,10 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                 options={indianStatesOptions}
               />
             )}
+
             {watch("stateUT") === "Kerala" && (
               <FormField
-                label="District"
+                label="Current District of residence"
                 name="district"
                 type="select"
                 control={control}
@@ -753,11 +1066,11 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
               control={control}
               errors={errors}
               required={true}
-              placeholder="List the JNV schools where you have worked"
+              placeholder="List the JNV schools where you have worked (e.g., JNV Ernakulam, JNV Wayanad)"
             />
 
             <FormField
-              label="Years of Working Experience"
+              label="Years of Working Experience in JNV"
               name="yearsOfWorking"
               type="select"
               control={control}
@@ -774,20 +1087,103 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
             />
 
             <FormField
-              label="Current Position"
+              label="Current Position/Designation"
               name="currentPosition"
               type="select"
               control={control}
               errors={errors}
+              required={true}
               options={[
                 { value: "Principal", label: "Principal" },
                 { value: "Vice Principal", label: "Vice Principal" },
                 { value: "PGT", label: "PGT" },
                 { value: "TGT", label: "TGT" },
+                {
+                  value: "Administrative Staff",
+                  label: "Administrative Staff",
+                },
+                { value: "Medical Staff", label: "Medical Staff" },
                 { value: "Miscellaneous Staff", label: "Miscellaneous Staff" },
                 { value: "Retired", label: "Retired" },
                 { value: "Other", label: "Other" },
               ]}
+            />
+
+            {watch("currentPosition") === "PGT" && (
+              <FormField
+                label="Subject/Department"
+                name="subject"
+                type="select"
+                control={control}
+                errors={errors}
+                options={[
+                  { value: "Physics", label: "Physics" },
+                  { value: "Chemistry", label: "Chemistry" },
+                  { value: "Mathematics", label: "Mathematics" },
+                  { value: "Biology", label: "Biology" },
+                  { value: "Computer Science", label: "Computer Science" },
+                  { value: "English", label: "English" },
+                  { value: "Hindi", label: "Hindi" },
+                  { value: "History", label: "History" },
+                  { value: "Geography", label: "Geography" },
+                  { value: "Economics", label: "Economics" },
+                  { value: "Commerce", label: "Commerce" },
+                  { value: "Physical Education", label: "Physical Education" },
+                  { value: "Other", label: "Other" },
+                ]}
+              />
+            )}
+
+            {watch("currentPosition") === "TGT" && (
+              <FormField
+                label="Subject/Department"
+                name="subject"
+                type="select"
+                control={control}
+                errors={errors}
+                options={[
+                  { value: "Science", label: "Science" },
+                  { value: "Mathematics", label: "Mathematics" },
+                  { value: "Social Studies", label: "Social Studies" },
+                  { value: "English", label: "English" },
+                  { value: "Hindi", label: "Hindi" },
+                  { value: "Regional Language", label: "Regional Language" },
+                  { value: "Art", label: "Art" },
+                  { value: "Music", label: "Music" },
+                  { value: "Physical Education", label: "Physical Education" },
+                  { value: "Work Experience", label: "Work Experience" },
+                  { value: "Other", label: "Other" },
+                ]}
+              />
+            )}
+
+            {watch("currentPosition") === "Other" && (
+              <FormField
+                label="Please specify your position"
+                name="otherPosition"
+                type="text"
+                control={control}
+                errors={errors}
+                placeholder="Enter your position/designation"
+              />
+            )}
+
+            <FormField
+              label="Area of Expertise/Specialization"
+              name="areaOfExpertise"
+              type="text"
+              control={control}
+              errors={errors}
+              placeholder="Your specialized skills or expertise (e.g., Science Education, Administration, Counseling)"
+            />
+
+            <FormField
+              label="Any Additional Professional Details"
+              name="additionalDetails"
+              type="textarea"
+              control={control}
+              errors={errors}
+              placeholder="Additional information about your professional experience or achievements"
             />
           </FormSection>
         )}
@@ -796,15 +1192,15 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
         {currentStep === 3 && (
           <FormSection title="Event Attendance">
             <div className="space-y-6">
-            <FormField
+              <FormField
                 label="Will you attend the event?"
-              name="isAttending"
-              type="checkbox"
-              control={control}
-              errors={errors}
-            />
+                name="isAttending"
+                type="checkbox"
+                control={control}
+                errors={errors}
+              />
 
-            {isAttending && (
+              {isAttending && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
@@ -837,35 +1233,62 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                     />
 
                     <div className="space-y-4 mt-8">
+                      <h3 className="text-lg font-medium text-gray-900">
+                        Your interest in additional offerings during the meet
+                      </h3>
+
                       <FormField
-                        label="How would you like to contribute to the event?"
-                        name="eventContribution"
+                        label="What would you like to do additionally during the meet?"
+                        name="eventParticipation"
                         type="multiselect"
                         control={control}
                         errors={errors}
                         options={[
-                          { value: "organize", label: "Help organize" },
-                          { value: "volunteer", label: "Volunteer" },
-                          { value: "sponsor", label: "Sponsor" },
-                          { value: "perform", label: "Perform" },
-                          { value: "speak", label: "Speaker" },
-                          { value: "training", label: "Conduct Training" },
-                          { value: "mentoring", label: "Mentoring Session" },
+                          { value: "none", label: "None" },
+                          { value: "volunteering", label: "Volunteering" },
+                          { value: "speaker", label: "Guest Speaker" },
+                          {
+                            value: "panelist",
+                            label: "Panel Discussion Participant",
+                          },
+                          { value: "workshop", label: "Workshop Facilitator" },
+                          {
+                            value: "academicSession",
+                            label: "Academic Session Lead",
+                          },
+                          {
+                            value: "culturalTrainer",
+                            label: "Cultural Program (as Trainer)",
+                          },
+                          {
+                            value: "culturalParticipant",
+                            label: "Cultural Program (as Participant)",
+                          },
+                          { value: "photography", label: "Photography" },
+                          { value: "videography", label: "Videography" },
+                          { value: "mentor", label: "Student Mentoring" },
+                          { value: "counseling", label: "Career Counseling" },
                           { value: "other", label: "Other" },
                         ]}
                       />
 
-                      {watch("eventContribution")?.length > 0 && (
-                        <FormField
-                          label="Please provide details about your contribution"
-                          name="contributionDetails"
-                          type="textarea"
-                          control={control}
-                          errors={errors}
-                          placeholder="Describe how you would like to contribute"
-                          rows={4}
-                        />
-                      )}
+                      <FormField
+                        label="Please explain your proposal in detail"
+                        name="participationDetails"
+                        type="textarea"
+                        control={control}
+                        errors={errors}
+                        placeholder="Provide detailed information about your proposed offering, including any specific requirements, duration, space needed, etc."
+                        rows={4}
+                      />
+
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                        <p className="text-yellow-800 text-sm">
+                          Note: Thank you. Your interest for additional offering
+                          will be considered based on the requirements and other
+                          logistics factors (time, space etc.) for inclusion.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -877,67 +1300,50 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
         {/* Sponsorship Step */}
         {currentStep === 4 && (
           <FormSection title="Sponsorship">
-            <p className="text-gray-600 mb-4">
-              Sponsorship helps make UNMA 2025 a successful event. As a staff
-              member, your contribution is valuable to us.
-            </p>
-
-            <FormField
-              label="Are you interested in sponsoring the event?"
-              name="interestedInSponsorship"
-              type="checkbox"
-              control={control}
-              errors={errors}
-              required={true}
-            />
+            <div className="mb-6">
+              <p className="text-gray-600 mb-4">
+                Would you be interested in sponsoring the event? We offer
+                various sponsorship tiers with different benefits and visibility
+                levels.
+              </p>
+              <FormField
+                label="Interested in Sponsorship"
+                name="interestedInSponsorship"
+                type="checkbox"
+                control={control}
+                errors={errors}
+              />
+            </div>
 
             {watch("interestedInSponsorship") && (
               <>
-                <FormField
-                  label="Sponsorship Type"
-                  name="sponsorshipType"
-                  type="multiselect"
-                  control={control}
-                  errors={errors}
-                  options={[
-                    { value: "gold", label: "Gold Sponsor (₹25,000+)" },
-                    { value: "silver", label: "Silver Sponsor (₹15,000+)" },
-                    { value: "bronze", label: "Bronze Sponsor (₹10,000+)" },
-                    {
-                      value: "supporting",
-                      label: "Supporting Sponsor (₹5,000+)",
-                    },
-                    {
-                      value: "inkind",
-                      label: "In-kind Sponsor (Services/Products)",
-                    },
-                    { value: "other", label: "Other" },
-                  ]}
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                  <p className="text-yellow-800 text-sm">
+                    The organizing team will contact you directly to discuss the
+                    details and process.
+                  </p>
+                </div>
+                <div className="mb-6">
+                  <p className="text-gray-600">
+                    Please select your preferred sponsorship tier. Our team will
+                    contact you directly to discuss the details and process.
+                  </p>
+                </div>
+
+                <SponsorshipCards
+                  selectedTier={watch("sponsorshipTier")}
+                  onSelectTier={(tier) => setValue("sponsorshipTier", tier)}
                 />
 
-                <FormField
-                  label="Sponsorship Details"
-                  name="sponsorshipDetails"
-                  type="textarea"
-                  control={control}
-                  errors={errors}
-                  placeholder="Please provide details about your sponsorship interest, including any specific requirements or offerings."
-                  rows={4}
-                />
-
-                <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
-                  <h4 className="font-medium text-yellow-800">
-                    Sponsorship Benefits
-                  </h4>
-                  <ul className="mt-2 text-sm text-yellow-700 list-disc pl-5 space-y-1">
-                    <li>Recognition in event materials and website</li>
-                    <li>
-                      Exhibition space at the venue (Gold/Silver sponsors)
-                    </li>
-                    <li>Speaking opportunity (Gold sponsors)</li>
-                    <li>Special mention during the event</li>
-                    <li>Tax benefits as applicable</li>
-                  </ul>
+                <div className="mt-6">
+                  <FormField
+                    label="Additional Sponsorship Details"
+                    name="sponsorshipDetails"
+                    type="textarea"
+                    control={control}
+                    errors={errors}
+                    placeholder="Any specific requirements or questions about sponsorship"
+                  />
                 </div>
               </>
             )}
@@ -989,12 +1395,13 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                         ) {
                           const postOffice = data[0].PostOffice[0];
 
-                          setValue("district", postOffice.District);
-                          setValue("state", postOffice.State);
+                          setValue("pinDistrict", postOffice.District);
+                          setValue("pinState", postOffice.State);
                           setValue(
-                            "taluk",
+                            "pinTaluk",
                             postOffice.Block || postOffice.District
                           );
+                          setValue("subPostOffice", postOffice.Name);
 
                           // Show success message with location details
                           toast.dismiss();
@@ -1003,17 +1410,19 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                           );
                         } else {
                           // Clear the values if pincode is invalid
-                          setValue("district", "");
-                          setValue("state", "");
-                          setValue("taluk", "");
+                          setValue("pinDistrict", "");
+                          setValue("pinState", "");
+                          setValue("pinTaluk", "");
+                          setValue("subPostOffice", "");
                           toast.dismiss();
                           toast.error("Invalid pincode or location not found");
                         }
                       } catch (error) {
                         // Clear the values if there's an error
-                        setValue("district", "");
-                        setValue("state", "");
-                        setValue("taluk", "");
+                        setValue("pinDistrict", "");
+                        setValue("pinState", "");
+                        setValue("pinTaluk", "");
+                        setValue("subPostOffice", "");
                         toast.dismiss();
                         toast.error(
                           "Error fetching location details. Please try again."
@@ -1021,9 +1430,10 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                       }
                     } else {
                       // Clear the values if pincode is not 6 digits
-                      setValue("district", "");
-                      setValue("state", "");
-                      setValue("taluk", "");
+                      setValue("pinDistrict", "");
+                      setValue("pinState", "");
+                      setValue("pinTaluk", "");
+                      setValue("subPostOffice", "");
                       // Don't show any message for incomplete pincode
                     }
                   }}
@@ -1045,21 +1455,31 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                   <h4 className="text-sm font-medium text-gray-700 mb-2">
                     Location Details
                   </h4>
-                  {watch("district") && watch("state") ? (
+                  {watch("pinDistrict") && watch("pinState") ? (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div>
                         <p className="text-sm text-gray-500">District</p>
                         <p className="text-sm font-medium">
-                          {watch("district")}
+                          {watch("pinDistrict")}
                         </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">Taluk/Block</p>
-                        <p className="text-sm font-medium">{watch("taluk")}</p>
+                        <p className="text-sm font-medium">
+                          {watch("pinTaluk")}
+                        </p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-500">State</p>
-                        <p className="text-sm font-medium">{watch("state")}</p>
+                        <p className="text-sm font-medium">
+                          {watch("pinState")}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500">Sub Post Office</p>
+                        <p className="text-sm font-medium">
+                          {watch("subPostOffice")}
+                        </p>
                       </div>
                     </div>
                   ) : (
@@ -1110,11 +1530,11 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
               <FormField
                 label="Mode of Transport"
                 name="modeOfTransport"
-                  type="select"
-                  control={control}
-                  errors={errors}
-                  required={true}
-                  options={[
+                type="select"
+                control={control}
+                errors={errors}
+                required={true}
+                options={[
                   { value: "car", label: "Car" },
                   { value: "train", label: "Train" },
                   { value: "flight", label: "Flight" },
@@ -1139,13 +1559,13 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                   />
 
                   {watch("readyForRideShare") === "yes" && (
-                  <FormField
+                    <FormField
                       label="How many people can you accommodate in your car?"
                       name="rideShareCapacity"
-                    type="number"
-                    control={control}
-                    errors={errors}
-                    required={true}
+                      type="number"
+                      control={control}
+                      errors={errors}
+                      required={true}
                       min={1}
                       max={6}
                     />
@@ -1169,21 +1589,21 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
               {watch("modeOfTransport") !== "car" &&
                 watch("modeOfTransport") && (
                   <div className="space-y-4">
-                <FormField
-                      label="Would you like to share a ride from your starting point?"
+                    <FormField
+                      label="Would you like to connect with other staff from your starting point?"
                       name="wantRideShare"
                       type="select"
-                  control={control}
-                  errors={errors}
+                      control={control}
+                      errors={errors}
                       required={true}
-                  options={[
+                      options={[
                         { value: "yes", label: "Yes" },
                         { value: "no", label: "No" },
                       ]}
                     />
 
                     {watch("wantRideShare") === "yes" && (
-                  <FormField
+                      <FormField
                         label="Number of people in your group"
                         name="rideShareGroupSize"
                         type="number"
@@ -1200,15 +1620,15 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
               <FormField
                 label="Special Requirements for Travel"
                 name="travelSpecialRequirements"
-                    type="textarea"
-                    control={control}
-                    errors={errors}
+                type="textarea"
+                control={control}
+                errors={errors}
                 placeholder="Any specific requirements for travel (e.g., wheelchair access, medical conditions, etc.)"
               />
 
               {/* Show potential group information */}
               {watch("startPincode") &&
-                watch("district") &&
+                watch("pinDistrict") &&
                 ((watch("modeOfTransport") === "car" &&
                   watch("readyForRideShare") === "yes") ||
                   (watch("modeOfTransport") !== "car" &&
@@ -1219,12 +1639,12 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                     </h3>
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <p className="text-gray-600 text-sm">
-                        Based on your location ({watch("district")},{" "}
-                        {watch("state")}), we'll:
+                        Based on your location ({watch("pinDistrict")},{" "}
+                        {watch("pinState")}), we'll:
                       </p>
                       <ul className="list-disc list-inside text-gray-600 text-sm mt-2 space-y-1">
                         <li>
-                          Group you with other staff from {watch("district")}{" "}
+                          Group you with other staff from {watch("pinDistrict")}{" "}
                           district
                         </li>
                         <li>Coordinate group transportation arrangements</li>
@@ -1267,17 +1687,17 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
               options={[
                 { value: "not-required", label: "I don't need accommodation" },
                 {
-                  value: "need",
-                  label:
-                    "I'm open to joining someone for shared accommodation.",
+                  value: "provide",
+                  label: "I can provide accommodation to others at my place",
                 },
                 {
-                  value: "provide",
-                  label: "I can provide accommodation to others",
+                  value: "need",
+                  label:
+                    "Please connect me with staff who is providing accommodation at their place",
                 },
                 {
                   value: "discount-hotel",
-                  label: "I need discount hotel booking",
+                  label: "I need discounted hotel booking",
                 },
               ]}
             />
@@ -1291,6 +1711,168 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                     arrangements.
                   </p>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField
+                    label="Accommodation Location Pincode"
+                    name="accommodationPincode"
+                    type="text"
+                    control={control}
+                    errors={errors}
+                    required={true}
+                    placeholder="Enter your accommodation location pincode"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    onChange={async (e) => {
+                      const pincodeValue = e.target.value;
+                      if (pincodeValue.length === 6) {
+                        try {
+                          // Show loading state
+                          toast.info("Fetching location details...", {
+                            autoClose: false,
+                            closeButton: false,
+                            isLoading: true,
+                          });
+
+                          const data = await getPincodeDetails(pincodeValue);
+
+                          if (
+                            data &&
+                            data[0] &&
+                            data[0].Status === "Success" &&
+                            data[0].PostOffice &&
+                            data[0].PostOffice.length > 0
+                          ) {
+                            const postOffice = data[0].PostOffice[0];
+
+                            setValue(
+                              "accommodationDistrict",
+                              postOffice.District
+                            );
+                            setValue("accommodationState", postOffice.State);
+                            setValue(
+                              "accommodationTaluk",
+                              postOffice.Block || postOffice.District
+                            );
+                            //array of sub post offices
+                            const subPostOffices = data[0].PostOffice.filter(
+                              (office) =>
+                                office.BranchType === "Sub Post Office"
+                            );
+
+                            // If you want only names of sub post offices:
+                            const subPostOfficeNames = subPostOffices.map(
+                              (office) => office.Name
+                            );
+
+                            // Example: set subPostOffice as an array of names
+                            setValue(
+                              "accommodationSubPostOffice",
+                              subPostOfficeNames[0] || postOffice.Name
+                            );
+
+                            // Show success message with location details
+                            toast.dismiss();
+                            toast.success(
+                              `Location found: ${postOffice.District}, ${postOffice.State}`
+                            );
+                          } else {
+                            // Clear the values if pincode is invalid
+                            setValue("accommodationDistrict", "");
+                            setValue("accommodationState", "");
+                            setValue("accommodationTaluk", "");
+                            setValue("accommodationSubPostOffice", "");
+                            toast.dismiss();
+                            toast.error(
+                              "Invalid pincode or location not found"
+                            );
+                          }
+                        } catch (error) {
+                          // Clear the values if there's an error
+                          setValue("accommodationDistrict", "");
+                          setValue("accommodationState", "");
+                          setValue("accommodationTaluk", "");
+                          setValue("accommodationSubPostOffice", "");
+                          toast.dismiss();
+                          toast.error(
+                            "Error fetching location details. Please try again."
+                          );
+                        }
+                      } else {
+                        // Clear the values if pincode is not 6 digits
+                        setValue("accommodationDistrict", "");
+                        setValue("accommodationState", "");
+                        setValue("accommodationTaluk", "");
+                        setValue("accommodationSubPostOffice", "");
+                        // Don't show any message for incomplete pincode
+                      }
+                    }}
+                  />
+
+                  <FormField
+                    label="Nearest Landmark"
+                    name="accommodationLandmark"
+                    type="text"
+                    control={control}
+                    errors={errors}
+                    placeholder="e.g., Railway Station, Bus Stand, etc."
+                  />
+                </div>
+
+                {/* Display location details if pincode is valid */}
+                {watch("accommodationPincode")?.length === 6 && (
+                  <div className="bg-gray-50 p-4 rounded-lg mt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                      Location Details
+                    </h4>
+                    {watch("accommodationDistrict") &&
+                    watch("accommodationState") ? (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <p className="text-sm text-gray-500">District</p>
+                          <p className="text-sm font-medium">
+                            {watch("accommodationDistrict")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">Taluk/Block</p>
+                          <p className="text-sm font-medium">
+                            {watch("accommodationTaluk")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">State</p>
+                          <p className="text-sm font-medium">
+                            {watch("accommodationState")}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-gray-500">
+                            Sub Post Office
+                          </p>
+                          <p className="text-sm font-medium">
+                            {watch("accommodationSubPostOffice")}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <p className="text-sm text-red-600">
+                          Invalid pincode or location not found
+                        </p>
+                        <FormField
+                          label="Please enter your accommodation area details"
+                          name="accommodationArea"
+                          type="text"
+                          control={control}
+                          errors={errors}
+                          required={true}
+                          placeholder="Enter your city/town name"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <FormField
                   label="How many people can you accommodate?"
@@ -1346,14 +1928,14 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                       />
                     </svg>
                     <p className="text-green-800">
-                      Previous contribution of ₹{previousContributionAmount} was
-                      successful
+                      Total contribution of ₹{previousContributionAmount}{" "}
+                      received
                     </p>
                   </div>
                 </div>
               )}
 
-            <FormField
+              <FormField
                 label={`${
                   hasPreviousContribution ? "Additional " : ""
                 }Contribution Amount (in ₹)`}
@@ -1365,6 +1947,27 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                 min={1}
                 valueAsNumber={true}
               />
+
+              {hasPreviousContribution && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <p className="text-blue-800 flex items-center">
+                    <svg
+                      className="h-5 w-5 text-blue-500 mr-2"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    You can make additional contributions if you wish. Your
+                    total contribution will be the sum of all payments.
+                  </p>
+                </div>
+              )}
 
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -1419,7 +2022,7 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                           />
                         </svg>
                         {hasPreviousContribution
-                          ? "Contribute More"
+                          ? "Add Contribution"
                           : "Proceed to Pay"}{" "}
                         ₹{watch("contributionAmount")}
                       </>
@@ -1488,15 +2091,24 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                     initiatives.
                   </p>
                   <p>
-                    Your contribution will directly impact our community. We're
-                    currently supporting alumni from Wayanad and Kozhikode who
-                    lost everything in the 2024 landslides.
+                    Your contribution will directly impact our community. We
+                    would like to support staff/students from JNV Wayanad and
+                    JNV Kozhikode who lost everything in the 2024 landslides.
                   </p>
                   <p className="font-medium text-lg">
-                    UNMA alumni stand together 24/7, supporting each other
+                    UNMA staff stand together 24/7, supporting each other
                     through thick and thin. Your generosity strengthens this
                     support system.
                   </p>
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <p className="text-yellow-800 text-sm">
+                      Note: To complete your registration, you need to pay the
+                      contribution amount. Now you will be redirected to the
+                      payment gateway. For international payments, kindly
+                      contact the organizing team to share the NRI account
+                      details.
+                    </p>
+                  </div>
                 </div>
               }
               confirmText="I Understand"
