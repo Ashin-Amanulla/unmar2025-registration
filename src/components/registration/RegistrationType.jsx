@@ -252,7 +252,7 @@ const RegistrationType = ({ onSelectType }) => {
           Select Your Connection to JNV
         </h2>
         <p className="text-gray-600 mt-2">
-          Please select how you are connected to JNV for the SUMMIT 2025 event
+          Please select how you are connected to JNV for the UNMA SUMMIT 2025 event
         </p>
       </div>
 

@@ -1066,7 +1066,7 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
               control={control}
               errors={errors}
               required={true}
-              placeholder="List the JNV schools where you have worked (e.g., JNV Ernakulam, JNV Wayanad)"
+              placeholder="List the JNV schools where you have worked in Kerala, Lakshadweep and Mahe (e.g., JNV Ernakulam, JNV Wayanad, JNV Mahe)"
             />
 
             <FormField
@@ -2090,11 +2090,11 @@ const StaffRegistrationForm = ({ onBack, storageKey }) => {
                     for UNMA's future activities and emergency support
                     initiatives.
                   </p>
-                  <p>
+                  {/* <p>
                     Your contribution will directly impact our community. We
                     would like to support staff/students from JNV Wayanad and
                     JNV Kozhikode who lost everything in the 2024 landslides.
-                  </p>
+                  </p> */}
                   <p className="font-medium text-lg">
                     UNMA staff stand together 24/7, supporting each other
                     through thick and thin. Your generosity strengthens this

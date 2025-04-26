@@ -219,7 +219,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
             setCurrentStep(parseInt(savedStep, 10));
           }
 
-          toast.info("Previous form data restored");
+          // toast.info("Previous form data restored");
 
           // If there's existing contribution data, restore the total amount
           if (
@@ -670,7 +670,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
           sponsorshipDetails: formData.sponsorshipDetails,
         },
         transportation: {
-          planTransportation: formData.planTransportation,
+          planTravel: formData.planTravel,
           startPincode: formData.startPincode,
           pinDistrict: formData.pinDistrict,
           pinState: formData.pinState,
@@ -1526,13 +1526,15 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                   >
                     Plan your travel for UNMA Meet 2025
                   </label>
-                  <p className="text-gray-500">
+                  {/* <p className="text-gray-500">
                     This information will help us organize group transportation
-                    and ride sharing from your area. We will coordinate special
-                    bookings based on the number of alumni from each area. You
-                    will have opportunity to communicate the changes in your
-                    plan later.
-                  </p>
+                    and ride sharing from your area. Both those who can offer
+                    ride sharing, and those in need of it are encouraged to fill
+                    these details. Later, you will have opportunity to
+                    communicate the changes, if any, in your plan. Also, we will
+                    coordinate special bookings based on the number of alumni
+                    from each area.
+                  </p> */}
                 </div>
               </div>
 
@@ -1546,15 +1548,19 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 >
                   <div className="bg-blue-50 p-4 rounded-lg mb-6">
                     <p className="text-blue-800 text-sm">
-                      This information will help us organize group
-                      transportation from your area. We'll coordinate special
-                      bookings based on the number of alumni from each area.
+                    This information will help us organize group transportation
+                    and ride sharing from your area. Both those who can offer
+                    ride sharing, and those in need of it are encouraged to fill
+                    these details. Later, you will have opportunity to
+                    communicate the changes, if any, in your plan. Also, we will
+                    coordinate special bookings based on the number of alumni
+                    from each area.
                     </p>
                   </div>
 
                   {/* First field - Starting Location */}
                   <FormField
-                    label="Starting Location"
+                    label="Starting Location "
                     name="originArea"
                     type="text"
                     control={control}
@@ -1578,7 +1584,9 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                       { value: "flight", label: "Flight" },
                       { value: "bus", label: "Bus" },
                       { value: "two-wheeler", label: "Two Wheeler" },
-                      { value: "other", label: "Other" },
+                      { value: "private", label: "Other Private Vehicle" },
+                      { value: "other", label: "Other " },
+
                     ]}
                   />
 
@@ -1916,13 +1924,16 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                   >
                     Accommodation planning for UNMA Meet 2025
                   </label>
-                  <p className="text-gray-500">
+                  <div className="bg-blue-50 p-4 rounded-lg mb-6">
+                  <p className="text-blue-800 text-sm">
                     This information will assist us in coordinating
                     accommodation arrangements for participants attending the
                     meet. We kindly request both those in need of accommodation
                     and those willing to provide accommodation to submit their
                     details accordingly.
-                  </p>
+                    </p>
+
+                  </div>
                 </div>
               </div>
 
@@ -1954,7 +1965,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                       {
                         value: "need",
                         label:
-                          "Please connect me with alumni who is providing accommodation at their place",
+                          "Connect me with alumni who can provide accommodation ",
                       },
                       {
                         value: "discount-hotel",
@@ -2561,11 +2572,11 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                     for UNMA's future activities and emergency support
                     initiatives.
                   </p>
-                  <p>
+                  {/* <p>
                     Your contribution will directly impact our community. We
                     would like to support alumni/students from JNV Wayanad and
                     JNV Kozhikode who lost everything in the 2024 landslides.
-                  </p>
+                  </p> */}
                   <p className="font-medium text-lg">
                     UNMA alumni stand together 24/7, supporting each other
                     through thick and thin. Your generosity strengthens this

@@ -214,7 +214,7 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
         ) {
           setAlertDialogConfig({
             title: "Contribution Amount Warning",
-            message: `Your contribution (₹${contributionAmount}) is less than the estimated expenses (₹${totalExpense}) for your group. Would you like to add more to the current amount?`,
+            message: `Your contribution (₹${contributionAmount}) is less than the estimated expenses (₹${totalExpense}) for the headcount specified. Would you like to add more to the current amount?`,
             onConfirm: () => proceedWithPayment(contributionAmount),
           });
           setShowAlertDialog(true);
@@ -993,11 +993,11 @@ const OtherRegistrationForm = ({ onBack, storageKey }) => {
                     for UNMA's future activities and emergency support
                     initiatives.
                   </p>
-                  <p>
+                  {/* <p>
                     Your contribution will directly impact our community. We're
                     currently supporting alumni from Wayanad and Kozhikode who
                     lost everything in the 2024 landslides.
-                  </p>
+                  </p> */}
                   <p className="font-medium text-lg">
                     UNMA alumni stand together 24/7, supporting each other
                     through thick and thin. Your generosity strengthens this
