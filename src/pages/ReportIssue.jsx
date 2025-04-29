@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { motion } from "framer-motion";
 import ScrollLink from "../components/ui/ScrollLink";
 import { Link } from "react-router-dom";
+import issuesApi from '../api/issueApi'
 
 const ReportIssue = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -17,25 +18,47 @@ const ReportIssue = () => {
   const onSubmit = async (data) => {
     setIsSubmitting(true);
     try {
-      // Here you would typically send the issue to your backend
-      console.log("Issue reported:", data);
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      toast.success(
-        "Issue reported successfully. We will investigate and resolve it as soon as possible."
-      );
+      const formData = {
+        title: "title",
+        category: data.category,
+        priority: "Medium",
+        description: data.description,
+        reportedBy: {
+          name: "Anonymous",
+          email: data.email,
+          phone: data.phone || "",
+        },
+        attachments: [
+          {
+            url: `/uploads/${data.attachment[0].name}`,
+            filename: data.attachment[0].name,
+          },
+        ],
+      };
+      // Call API with FormData
+      const response = await issuesApi.create(formData);
+  
+      if (response.success) {
+        toast.success(
+          "Issue reported successfully. We will investigate and resolve it as soon as possible."
+        );
+      } else {
+        toast.error(
+          "An error occurred while submitting your report. Please try again later."
+        );
+      }
+  
       reset();
     } catch (error) {
       toast.error(
         "An error occurred while submitting your report. Please try again later."
       );
+      console.error("Submission error:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
-
+  
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
@@ -60,17 +83,17 @@ const ReportIssue = () => {
                   Issue Type
                 </label>
                 <select
-                  {...register("issueType", {
+                  {...register("category", {
                     required: "Please select an issue type",
                   })}
                   className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary focus:outline-none"
                 >
                   <option value="">Select issue type</option>
-                  <option value="registration">Registration Issues</option>
-                  <option value="payment">Payment Problems</option>
-                  <option value="technical">Technical Issues</option>
-                  <option value="content">Content/Information Issues</option>
-                  <option value="other">Other</option>
+                  <option value="Registration">Registration Issues</option>
+                  <option value="Payment">Payment Problems</option>
+                  <option value="Technical">Technical Issues</option>
+                  <option value="Content">Content/Information Issues</option>
+                  <option value="Other">Other</option>
                 </select>
                 {errors.issueType && (
                   <p className="mt-1 text-sm text-red-600">
