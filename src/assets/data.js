@@ -107,20 +107,20 @@ export const DEFAULT_TSHIRT_SIZES = {
 
 // Add this with other constants at the top
 export const KERALA_DISTRICTS = [
-  { value: "Thiruvananthapuram", label: "Thiruvananthapuram" },
-  { value: "Kollam", label: "Kollam" },
-  { value: "Pathanamthitta", label: "Pathanamthitta" },
   { value: "Alappuzha", label: "Alappuzha" },
-  { value: "Kottayam", label: "Kottayam" },
-  { value: "Idukki", label: "Idukki" },
   { value: "Ernakulam", label: "Ernakulam" },
-  { value: "Thrissur", label: "Thrissur" },
-  { value: "Palakkad", label: "Palakkad" },
-  { value: "Malappuram", label: "Malappuram" },
-  { value: "Kozhikode", label: "Kozhikode" },
-  { value: "Wayanad", label: "Wayanad" },
+  { value: "Idukki", label: "Idukki" },
   { value: "Kannur", label: "Kannur" },
   { value: "Kasaragod", label: "Kasaragod" },
+  { value: "Kollam", label: "Kollam" },
+  { value: "Kottayam", label: "Kottayam" },
+  { value: "Kozhikode", label: "Kozhikode" },
+  { value: "Malappuram", label: "Malappuram" },
+  { value: "Palakkad", label: "Palakkad" },
+  { value: "Pathanamthitta", label: "Pathanamthitta" },
+  { value: "Thiruvananthapuram", label: "Thiruvananthapuram" },
+  { value: "Thrissur", label: "Thrissur" },
+  { value: "Wayanad", label: "Wayanad" },
 ];
 
 // Add this with other constants at the top 

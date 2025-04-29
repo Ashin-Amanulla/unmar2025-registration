@@ -52,6 +52,24 @@ const countryOptions = Object.entries(countries.getNames("en"))
   }))
   .sort((a, b) => a.label.localeCompare(b.label));
 
+// Add these validation functions at the top of the file, after the imports
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+const isValidPhoneNumber = (phone) => {
+  if (!phone) return false;
+  // Remove all non-digit characters
+  const digits = phone.replace(/\D/g, "");
+  // For Indian numbers (starting with +91 or 91)
+  if (phone.startsWith("+91") || phone.startsWith("91")) {
+    return digits.length === 12; // 91 + 10 digits
+  }
+  // For other countries, ensure at least 10 digits
+  return digits.length >= 10;
+};
+
 const AlumniRegistrationForm = ({ onBack, storageKey }) => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
@@ -115,8 +133,8 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
       whatsappNumber: "",
       school: "",
       yearOfPassing: "",
-      country: "India",
-      stateUT: "",
+      country: "IN",
+      stateUT: "Kerala",
       verificationQuizPassed: false,
 
       // Professional
@@ -338,11 +356,13 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
         "name",
         "contactNumber",
         "school",
+        "bloodGroup",
         "yearOfPassing",
         "country",
       ];
 
-      if (watch("country") === "India") {
+      // Always validate stateUT for Indian residents
+      if (watch("country") === "IN") {
         fieldsToValidate.push("stateUT");
 
         // If state is Kerala, district is required
@@ -999,14 +1019,14 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 <div className="ml-3">
                   <h3 className="text-sm font-medium text-amber-800">
                     <strong>
-                      A Note for Alumni from JNV Alappuzha,JNV Malappuram, and
-                      JNV Thrissur
+                    A Note for Alumni from JNV Alappuzha, JNV Malappuram, and
+                      JNV Thrissur 
                     </strong>
                   </h3>
                   <div className="mt-2 text-sm text-amber-700">
                     <p>
-                      The registration process of JNV Alappuzha,JNV
-                      Malappuram,and JNV Thrissur are routed through the
+                      The registration process of JNV Alappuzha,
+                      JNV Malappuram, and JNV Thrissur are routed through the
                       respective alumni association as per the decision of these
                       associations. Alumni from these schools are requested to
                       contact your alumni leadership.
@@ -1073,6 +1093,10 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                     }
                     email={email}
                     phone={watch("contactNumber")}
+                    isEnabled={
+                      isValidEmail(email) &&
+                      isValidPhoneNumber(watch("contactNumber"))
+                    }
                   />
                 )}
 
@@ -1238,10 +1262,10 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
               label="Blood Group (for emergencies)"
               name="bloodGroup"
               type="select"
+              required={true}
               control={control}
               errors={errors}
               options={[
-                { value: "", label: "Select blood group" },
                 { value: "A+", label: "A+" },
                 { value: "A-", label: "A-" },
                 { value: "B+", label: "B+" },
@@ -1264,7 +1288,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
             />
 
             <FormField
-              label="Year of Passing (12th grade)"
+              label="Year of Passing 12th grade (this is to find out your batch)"
               name="yearOfPassing"
               type="select"
               control={control}
@@ -1282,7 +1306,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
               type="select"
               control={control}
               errors={errors}
-              // required={true}
+              required={true}
               options={countryOptions}
               placeholder="Select your country"
               isSearchable={true}
@@ -1548,13 +1572,13 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 >
                   <div className="bg-blue-50 p-4 rounded-lg mb-6">
                     <p className="text-blue-800 text-sm">
-                    This information will help us organize group transportation
-                    and ride sharing from your area. Both those who can offer
-                    ride sharing, and those in need of it are encouraged to fill
-                    these details. Later, you will have opportunity to
-                    communicate the changes, if any, in your plan. Also, we will
-                    coordinate special bookings based on the number of alumni
-                    from each area.
+                      This information will help us organize group
+                      transportation and ride sharing from your area. Both those
+                      who can offer ride sharing, and those in need of it are
+                      encouraged to fill these details. Later, you will have
+                      opportunity to communicate the changes, if any, in your
+                      plan. Also, we will coordinate special bookings based on
+                      the number of alumni from each area.
                     </p>
                   </div>
 
@@ -1582,11 +1606,11 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                       { value: "car", label: "Car" },
                       { value: "train", label: "Train" },
                       { value: "flight", label: "Flight" },
+                      { value: "boat", label: "Boat/Ship" },
                       { value: "bus", label: "Bus" },
                       { value: "two-wheeler", label: "Two Wheeler" },
                       { value: "private", label: "Other Private Vehicle" },
                       { value: "other", label: "Other " },
-
                     ]}
                   />
 
@@ -1925,14 +1949,13 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                     Accommodation planning for UNMA Meet 2025
                   </label>
                   <div className="bg-blue-50 p-4 rounded-lg mb-6">
-                  <p className="text-blue-800 text-sm">
-                    This information will assist us in coordinating
-                    accommodation arrangements for participants attending the
-                    meet. We kindly request both those in need of accommodation
-                    and those willing to provide accommodation to submit their
-                    details accordingly.
+                    <p className="text-blue-800 text-sm">
+                      This information will assist us in coordinating
+                      accommodation arrangements for participants attending the
+                      meet. We kindly request both those in need of
+                      accommodation and those willing to provide accommodation
+                      to submit their details accordingly.
                     </p>
-
                   </div>
                 </div>
               </div>
@@ -2208,7 +2231,6 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 errors={errors}
                 // required={true}
                 options={[
-                  { value: "", label: "Select an option" },
                   { value: "Yes", label: "Yes" },
                   { value: "No", label: "No" },
                 ]}
@@ -2333,7 +2355,6 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                 control={control}
                 errors={errors}
                 options={[
-                  { value: "", label: "Select an option" },
                   { value: "Yes", label: "Yes" },
                   { value: "No", label: "No" },
                 ]}
@@ -2349,7 +2370,6 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                   errors={errors}
                   // required={true}
                   options={[
-                    { value: "", label: "Select an option" },
                     { value: "yes", label: "Yes" },
                     { value: "no", label: "No" },
                   ]}
@@ -2585,8 +2605,8 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                     <p className="text-yellow-800 text-sm">
                       Note: To complete your registration, you need to pay the
-                      contribution amount.Now you will be redirected to the
-                      payment gateway. For international payments, kindky
+                      contribution amount. Now you will be redirected to the
+                      payment gateway. For international payments, kindly
                       contact the organizing team to share you the NRI account
                       details.
                     </p>

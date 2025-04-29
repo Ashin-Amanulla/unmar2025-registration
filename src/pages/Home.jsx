@@ -218,7 +218,7 @@ const Home = () => {
                 >
                   <span className="text-yellow-400 text-xl">★</span>
                   <span className="text-white font-bold tracking-wider">
-                    United Navodayan Malayalee Association (UNMA ) 
+                    United Navodayan Malayalee Association (UNMA )
                   </span>
                   <span className="text-yellow-400 text-xl">★</span>
                 </motion.div>
@@ -241,9 +241,10 @@ const Home = () => {
                   </span>
                 </h1>
                 <p className="text-xl text-white/80 leading-relaxed max-w-3xl mx-auto">
-                  Lets have a memorable gathering of Jawahar Navodaya
-                  Vidyalaya alumni from 14 districts of Kerala,Mahe , Lakshadweep and other navodayans residing in Kerala. Reconnect with school
-                  friends and staff ,share stories, and create new memories.
+                  Let’s have a memorable gathering of Jawahar Navodaya Vidyalaya
+                  Alumni from 14 districts of Kerala, Mahe, Lakshadweep, and
+                  other Navodayans residing in Kerala. Reconnect with school
+                  friends and staff, share stories, and create new memories.
                 </p>
               </motion.div>
 
@@ -277,7 +278,7 @@ const Home = () => {
                   <div>
                     <h3 className="text-white text-lg font-semibold">When</h3>
                     <p className="text-white text-xl font-bold">
-                      Saturday, August 30, 2025 
+                      Saturday, August 30, 2025
                     </p>
                     <p className="text-white/80">9:00 AM - 5:00 PM</p>
                   </div>
@@ -314,7 +315,9 @@ const Home = () => {
                   </div>
                   <div>
                     <h3 className="text-white text-lg font-semibold">Who</h3>
-                    <p className="text-white text-xl font-bold">Navodayans and Staff</p>
+                    <p className="text-white text-xl font-bold">
+                      Navodayans and Staff
+                    </p>
                     <p className="text-white/80">Family Members Welcome</p>
                   </div>
                 </motion.div>
@@ -613,7 +616,7 @@ const Home = () => {
                             Who Can Attend
                           </h4>
                           <p className="text-gray-800 font-medium">
-                            JNV Kerala Alumni
+                            Alumni from Kerala, Mahe and Lakshadweep
                           </p>
                           <p className="text-gray-600">
                             Family members are welcome to join
@@ -643,9 +646,9 @@ const Home = () => {
                             Registration
                           </h4>
                           <p className="text-gray-800 font-medium">
-                            A nominal amount of Registration fee will be charged based on head count.
+                            A nominal amount of Registration fee will be charged
+                            based on head count.
                           </p>
-                      
                         </div>
                       </div>
                     </div>
