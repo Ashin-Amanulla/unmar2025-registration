@@ -214,7 +214,7 @@ export const FormField = ({
 };
 
 // OTP Input component
-export const OtpInput = ({ onVerify, email, phone }) => {
+export const OtpInput = ({ onVerify, email, phone, isEnabled = true }) => {
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
@@ -323,8 +323,12 @@ export const OtpInput = ({ onVerify, email, phone }) => {
         <button
           type="button"
           onClick={sendOtp}
-          disabled={isLoading || !email}
-          className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+          disabled={isLoading || !isEnabled}
+          className={`w-full px-4 py-2 rounded-md ${
+            isLoading || !isEnabled
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700 text-white"
+          }`}
         >
           {isLoading ? "Sending OTP..." : "Send OTP"}
         </button>
@@ -360,9 +364,11 @@ export const OtpInput = ({ onVerify, email, phone }) => {
             <button
               type="button"
               onClick={sendOtp}
-              disabled={resendDisabled}
+              disabled={resendDisabled || !isEnabled}
               className={`text-blue-600 hover:text-blue-800 ${
-                resendDisabled ? "opacity-50 cursor-not-allowed" : ""
+                resendDisabled || !isEnabled
+                  ? "opacity-50 cursor-not-allowed"
+                  : ""
               }`}
             >
               {resendDisabled ? `Resend OTP in ${countdown}s` : "Resend OTP"}
