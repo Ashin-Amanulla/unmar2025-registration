@@ -141,7 +141,7 @@ const Footer = () => {
                 </svg>
                 <span>summit2025@unma.in</span>
               </li>
-              <li className="flex items-center">
+              {/* <li className="flex items-center">
                 <svg
                   className="w-5 h-5 mr-2"
                   fill="none"
@@ -157,7 +157,7 @@ const Footer = () => {
                   ></path>
                 </svg>
                 <span>+91 7012394747</span>
-              </li>
+              </li> */}
             </ul>
           </div>
         </div>

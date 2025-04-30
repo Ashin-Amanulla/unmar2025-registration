@@ -247,7 +247,7 @@ const Contact = () => {
                     </div>
                   </div>
 
-                  <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex gap-4">
+                  {/* <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex gap-4">
                     <div className="rounded-full bg-primary/10 p-3 h-fit">
                       <PhoneIcon className="w-6 h-6 text-primary" />
                     </div>
@@ -265,7 +265,7 @@ const Contact = () => {
                       </p>
                       <p className="text-gray-500 text-sm">Available 24 * 7</p>
                     </div>
-                  </div>
+                  </div> */}
 
                   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 flex gap-4">
                     <div className="rounded-full bg-primary/10 p-3 h-fit">
