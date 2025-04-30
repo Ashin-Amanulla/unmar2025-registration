@@ -1787,7 +1787,7 @@ const AlumniRegistrationForm = ({ onBack, storageKey }) => {
                     </div>
                     <div>
                       <FormField
-                        label="Expected Travel Time"
+                        label=" Start Time"
                         name="travelTime"
                         type="time"
                         control={control}

@@ -280,7 +280,7 @@ const Home = () => {
                     <p className="text-white text-xl font-bold">
                       Saturday, August 30, 2025
                     </p>
-                    <p className="text-white/80">9:00 AM - 5:00 PM</p>
+                    <p className="text-white/80">9:00 AM - 7:30 PM</p>
                   </div>
                 </motion.div>
 
@@ -569,7 +569,7 @@ const Home = () => {
                       <h3 className="text-3xl font-bold text-white mb-2">
                         August 30, 2025
                       </h3>
-                      <p className="text-white/90 text-xl">9:00 AM - 5:00 PM</p>
+                      <p className="text-white/90 text-xl">9:00 AM - 7:30 PM</p>
                       <div className="mt-8 flex justify-center">
                         <a
                           href="#"
