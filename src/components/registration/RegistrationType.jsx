@@ -59,7 +59,7 @@ const RegistrationType = ({ onSelectType }) => {
       id: "Other",
       title: "Other",
       description:
-        "Register as a family member, guest, or any other connection to JNV.",
+        "Register as an external participant.",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
